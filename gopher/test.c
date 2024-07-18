@@ -39,6 +39,7 @@ int main(int argc, char **argv) {
 	gopher_connect(addr);
 	
 	/* Free up any resources. */
+	gopher_disconnect(addr);
 	gopher_addr_free(addr);
 	
 	return 0;

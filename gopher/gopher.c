@@ -1,6 +1,6 @@
 /**
  * gopher.c
- * A portable Gopher protocol implementation.
+ * A portable, single header/source, Gopher protocol implementation.
  *
  * @author Nathan Campos <nathan@innoveworkshop.com>
  */
@@ -28,14 +28,6 @@
 	#include <arpa/inet.h>
 	#include <netinet/in.h>
 	#include <netdb.h>
-#endif /* _WIN32 */
-
-/* Private definitions. */
-#ifdef _WIN32
-	/* Shim things that Microsoft forgot to include in their implementation. */
-	#ifndef in_addr_t
-		typedef unsigned long in_addr_t;
-	#endif /* in_addr_t */
 #endif /* _WIN32 */
 
 /* Cross-platform socket function return error code. */
@@ -82,8 +74,11 @@ void log_errno(log_level_t level, const char *msg);
 void log_sockerrno(log_level_t level, const char *msg, int err);
 
 /* Private methods. */
+int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
 int gopher_addr_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai);
-int gopher_disconnect(gopher_addr_t *addr);
+#ifdef _WIN32
+char *win_wcstombs(const wchar_t *wstr);
+#endif /* _WIN32 */
 
 /**
  * Allocates and populates a gopherspace address object.
@@ -116,6 +111,7 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 	addr->selector = (selector) ? strdup(selector) : NULL;
 	addr->sockfd = INVALID_SOCKET;
 	addr->ipaddr = NULL;
+	addr->ipaddr_len = 0;
 
 	return addr;
 }
@@ -133,13 +129,18 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  */
 int gopher_addr_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
 	struct addrinfo hints;
+	char port[6];
 	
 	/* Build up the hints for the address we want to resolve. */
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	
-	return getaddrinfo(addr->host, NULL, &hints, ai);
+
+	/* Convert port to string. */
+	snprintf(port, 6, "%u", addr->port);
+	port[5] = '\0';
+
+	return getaddrinfo(addr->host, port, &hints, ai);
 }
 
 /**
@@ -206,15 +207,6 @@ int gopher_connect(gopher_addr_t *addr) {
 		return ret;
 	}
 
-	/* Allocate memory for the IP address. */
-	addr->ipaddr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
-	if (addr->ipaddr == NULL) {
-		log_printf(LOG_ERROR, "Failed to allocate memory for server IP address"
-			"\n");
-		freeaddrinfo(query);
-		return ENOMEM;
-	}
-	
 	/* Search for a resolved address that is compatible. */
 	ai = NULL;
 	for (ai = query; ai != NULL; ai = ai->ai_next) {
@@ -227,11 +219,51 @@ int gopher_connect(gopher_addr_t *addr) {
 		freeaddrinfo(query);
 		return EAFNOSUPPORT;
 	}
+
+	/* Allocate memory for the IP address. */
+	addr->ipaddr_len = ai->ai_addrlen;
+	addr->ipaddr = (struct sockaddr_in *)malloc(addr->ipaddr_len);
+	if (addr->ipaddr == NULL) {
+		log_printf(LOG_ERROR, "Failed to allocate memory for server IP address"
+			"\n");
+		freeaddrinfo(query);
+		return ENOMEM;
+	}
 	
 	/* Copy the server's IP address and free the resolve object. */
-	memcpy(addr->ipaddr, ai->ai_addr, sizeof(struct sockaddr_in));
+	memcpy(addr->ipaddr, ai->ai_addr, addr->ipaddr_len);
 	freeaddrinfo(query);
 	query = NULL;
+	
+	/* Get a socket file descriptor for our connection. */
+	addr->sockfd = socket(PF_INET, SOCK_STREAM, 0);
+	if (addr->sockfd == INVALID_SOCKET) {
+		log_sockerrno(LOG_FATAL, "Couldn't get a socket for our connection",
+			sockerrno);
+		return sockerrno;
+	}
+	
+#ifdef DEBUG
+	/* Log information about the address. */
+	if (1) {
+		char *buf;
+		ret = sockaddrstr(&buf, (struct sockaddr *)addr->ipaddr);
+		if (ret == 0) {
+			log_printf(LOG_INFO, "sockaddr addr->ipaddr %s:%d\n", buf,
+				ntohs(addr->ipaddr->sin_port));
+			free(buf);
+		} else {
+			log_errno(LOG_ERROR, "Couldn't get debug address information");
+		}
+	}
+#endif /* DEBUG */
+
+	/* Connect ourselves to the address. */
+	if (connect(addr->sockfd, (struct sockaddr *)addr->ipaddr,
+				addr->ipaddr_len) == SOCKET_ERROR) {
+		log_sockerrno(LOG_ERROR, "Couldn't connect to server", sockerrno);
+		return sockerrno;
+	}
 
 	return ret;
 }
@@ -257,11 +289,8 @@ int gopher_disconnect(gopher_addr_t *addr) {
 	#else
 		ret = shutdown(addr->sockfd, SHUT_RDWR);
 	#endif /* _WIN32 */	
-	if (ret == SOCKET_ERROR) {
-		addr->sockfd = INVALID_SOCKET;
-		log_sockerrno(LOG_ERROR, "Failed to shutdown connection", sockerrno);
-		return ret;
-	}
+	if (ret == SOCKET_ERROR)
+		log_sockerrno(LOG_WARNING, "Failed to shutdown connection", sockerrno);
 
 	/* Close the socket file descriptor. */
 #ifdef _WIN32
@@ -274,6 +303,119 @@ int gopher_disconnect(gopher_addr_t *addr) {
 		log_sockerrno(LOG_ERROR, "Failed to close socket", sockerrno);
 
 	return ret;
+}
+
+#ifdef _WIN32
+/**
+ * Converts a UTF-16 wide-character string into a UTF-8 multibyte string.
+ * @warning This function allocates memory that must be free'd by you!
+ *
+ * @param wstr UTF-16 string to be converted.
+ *
+ * @return UTF-8 multibyte converted string or NULL if an error occurred.
+ */
+char *win_wcstombs(const wchar_t *wstr) {
+	char *str;
+	int nLen;
+
+	/* Get required buffer size and allocate some memory for it. */
+	nLen = WideCharToMultiByte(CP_OEMCP, 0, wstr, -1, NULL, 0, NULL, NULL);
+	if (nLen == 0)
+		goto failure;
+	str = (char *)malloc(nLen * sizeof(char));
+	if (str == NULL)
+		return NULL;
+
+	/* Perform the conversion. */
+	nLen = WideCharToMultiByte(cap_utf8() ? CP_UTF8 : CP_OEMCP, 0, wstr, -1,
+							   str, nLen, NULL, NULL);
+	if (nLen == 0) {
+failure:
+		MessageBox(NULL, _T("Failed to convert UTF-16 string to UTF-8."),
+			_T("String Conversion Failure"), MB_ICONERROR | MB_OK);
+
+		return NULL;
+	}
+
+	return str;
+}
+#endif /* _WIN32 */
+
+/**
+ * Converts an IPv4 or IPv6 address from binary to a presentation format string
+ * representation.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param buf       Pointer to a string that will be populated with the
+ *                  presentation format IP address.
+ * @param sock_addr Generic IPv4 or IPv6 structure containing the address to be
+ *                  converted.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ */
+int sockaddrstr(char **buf, const struct sockaddr *sock_addr) {
+#ifdef _WIN32
+	TCHAR tmp[INET6_ADDRSTRLEN];
+	DWORD dwLen;
+
+	dwLen = INET6_ADDRSTRLEN;
+#else
+	char tmp[INET6_ADDRSTRLEN];
+#endif /* _WIN32 */
+
+	/* Determine which type of IP address we are dealing with. */
+	switch (sock_addr->sa_family) {
+		case AF_INET:
+#ifdef _WIN32
+			WSAAddressToString(sock_addr, sizeof(struct sockaddr_in), NULL,
+							   tmp, &dwLen);
+#else
+			inet_ntop(AF_INET,
+					  &(((const struct sockaddr_in *)sock_addr)->sin_addr),
+					  tmp, INET_ADDRSTRLEN);
+#endif /* _WIN32 */
+			break;
+		case AF_INET6:
+#ifdef _WIN32
+			WSAAddressToString(sock_addr, sizeof(struct sockaddr_in6), NULL,
+							   tmp, &dwLen);
+#else
+			inet_ntop(AF_INET6,
+					  &(((const struct sockaddr_in6 *)sock_addr)->sin6_addr),
+					  tmp, INET6_ADDRSTRLEN);
+#endif /* _WIN32 */
+			break;
+		default:
+			*buf = NULL;
+			return EAFNOSUPPORT;
+	}
+
+#ifdef _WIN32
+	/* Remove the port number from the string. */
+	for (dwLen = 0; tmp[dwLen] != '\0'; dwLen++) {
+		if (tmp[dwLen] == ':') {
+			tmp[dwLen] = '\0';
+			break;
+		}
+	}
+
+	/* Convert our string to UTF-8 assigning it to the return value. */
+	*buf = utf16_wcstombs(tmp);
+#else
+	/* Allocate space for our return string. */
+	*buf = (char *)malloc((strlen(tmp) + 1) * sizeof(char));
+	if (*buf == NULL) {
+		log_errno(LOG_FATAL, "Failed to allocate memory for IP address string");
+		return ENOMEM;
+	}
+
+	/* Copy our IP address over and return. */
+	strcpy(*buf, tmp);
+#endif /* _WIN32 */
+
+	return 0;
 }
 
 /**

@@ -1,6 +1,6 @@
 /**
  * gopher.h
- * A portable Gopher protocol implementation.
+ * A portable, single header/source, Gopher protocol implementation.
  *
  * @author Nathan Campos <nathan@innoveworkshop.com>
  */
@@ -10,6 +10,11 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#ifdef _WIN32
+	#include <winsock2.h>
+#else
+	#include <sys/socket.h>
+#endif /* _WIN32 */
 
 /* Version information. */
 #define LIBGOPHER_VER_STR "0.1"
@@ -32,6 +37,7 @@ typedef struct {
 	
 	int sockfd;
 	struct sockaddr_in *ipaddr;
+	socklen_t ipaddr_len;
 } gopher_addr_t;
 
 /* Gopherspace address handling. */
@@ -42,6 +48,7 @@ void gopher_addr_free(gopher_addr_t *addr);
 
 /* Connection handling. */
 int gopher_connect(gopher_addr_t *addr);
+int gopher_disconnect(gopher_addr_t *addr);
 
 
 #ifdef __cplusplus
