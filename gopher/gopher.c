@@ -75,10 +75,18 @@ void log_sockerrno(log_level_t level, const char *msg, int err);
 
 /* Private methods. */
 int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
-int gopher_addr_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai);
+int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai);
 #ifdef _WIN32
 char *win_wcstombs(const wchar_t *wstr);
 #endif /* _WIN32 */
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
+ * |                          Gopherspace Addressing                           |
+ * |                                                                           |
+ * +===========================================================================+
+ */
 
 /**
  * Allocates and populates a gopherspace address object.
@@ -127,7 +135,7 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  *
  * @return 0 if the operation was successful.
  */
-int gopher_addr_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
+int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
 	struct addrinfo hints;
 	char port[6];
 	
@@ -185,6 +193,14 @@ void gopher_addr_free(gopher_addr_t *addr) {
 	free(addr);
 }
 
+/*
+ * +===========================================================================+
+ * |                                                                           |
+ * |                            Connection Handling                            |
+ * |                                                                           |
+ * +===========================================================================+
+ */
+
 /**
  * Establishes a connection to a Gopher server.
  *
@@ -199,7 +215,7 @@ int gopher_connect(gopher_addr_t *addr) {
 	struct addrinfo *ai;
 	
 	/* Resolve the server's IP address. */
-	ret = gopher_addr_getaddrinfo(addr, &query);
+	ret = gopher_getaddrinfo(addr, &query);
 	if (ret != 0) {
 		log_printf(LOG_ERROR, "Failed to get address IP: (%d) %s\n", ret,
 			gai_strerror(ret));
@@ -304,6 +320,14 @@ int gopher_disconnect(gopher_addr_t *addr) {
 
 	return ret;
 }
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
+ * |                           Logging and Debugging                           |
+ * |                                                                           |
+ * +===========================================================================+
+ */
 
 #ifdef _WIN32
 /**
