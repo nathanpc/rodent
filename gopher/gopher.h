@@ -56,6 +56,8 @@ int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
 int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len);				
 int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 					 size_t *sent_len);
+int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
+					size_t *recv_len, int peek);
 
 #ifdef __cplusplus
 }

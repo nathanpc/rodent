@@ -23,6 +23,8 @@
 int main(int argc, char **argv) {
 	gopher_addr_t *addr;
 	int ret;
+	char buf[100];
+	size_t len;
 
 	printf("libgopher v" LIBGOPHER_VER_STR " tester\n");
 	
@@ -50,6 +52,13 @@ int main(int argc, char **argv) {
 	if (ret != 0) {
 		perror("Failed to send selector");
 		goto cleanup;
+	}
+
+	/* Print out everything we receive from the server. */
+	while (gopher_recv_raw(addr, buf, 99, &len, 0) == 0) {
+		/* Ensure we terminate the received string. */
+		buf[len] = '\0';
+		printf("%s", buf);
 	}
 	
 	/* Gracefully disconnect from the server. */
