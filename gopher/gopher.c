@@ -51,6 +51,13 @@
 	#define sockerrno errno
 #endif /* _WIN32 */
 
+/* Ensure we have ssize_t. */
+#ifndef ssize_t
+	#ifdef _WIN32
+		typedef LONG_PTR ssize_t;
+	#endif /* _WIN32 */
+#endif /* ssize_t */
+
 #ifdef _WIN32
 /* FormatMessage default flags. */
 #define FORMAT_MESSAGE_FLAGS \
@@ -319,6 +326,60 @@ int gopher_disconnect(gopher_addr_t *addr) {
 		log_sockerrno(LOG_ERROR, "Failed to close socket", sockerrno);
 
 	return ret;
+}
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
+ * |                     Socket and Networking Abstrations                     |
+ * |                                                                           |
+ * +===========================================================================+
+ */
+
+/**
+ * Sends a raw data buffer to a gopher server.
+ *
+ * @param addr     Gopherspace address object.
+ * @param buf      Data to be sent.
+ * @param len      Length of the data to be sent.
+ * @param sent_len Pointer to store the number of bytes actually sent. Ignored
+ *                 if NULL is passed.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ */
+int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
+					size_t *sent_len) {
+	ssize_t bytes_sent;
+
+	/* Try to send some information through a socket. */
+	bytes_sent = send(addr->sockfd, buf, len, 0);
+	if (bytes_sent == SOCKET_ERROR) {
+		log_sockerrno(LOG_ERROR, "Failed to send raw data over socket",
+			sockerrno);
+		return sockerrno;
+	}
+
+	/* Return the number of bytes sent. */
+	if (sent_len != NULL)
+		*sent_len = bytes_sent;
+
+	return 0;
+}
+
+/**
+ * Sends a string to a gopher server.
+ *
+ * @param addr     Gopherspace address object.
+ * @param buf      String to be sent.
+ * @param sent_len Pointer to store the number of bytes actually sent. Ignored
+ *                 if NULL is passed.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ */
+int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len) {
+	return gopher_send_raw(addr, (const void *)buf, strlen(buf), sent_len);
 }
 
 /*

@@ -50,6 +50,11 @@ void gopher_addr_free(gopher_addr_t *addr);
 int gopher_connect(gopher_addr_t *addr);
 int gopher_disconnect(gopher_addr_t *addr);
 
+/* Networking operations. */
+int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
+					size_t *sent_len);
+int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len);
+
 
 #ifdef __cplusplus
 }

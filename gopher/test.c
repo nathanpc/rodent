@@ -22,6 +22,7 @@
  */
 int main(int argc, char **argv) {
 	gopher_addr_t *addr;
+	int ret;
 
 	printf("libgopher v" LIBGOPHER_VER_STR " tester\n");
 	
@@ -36,12 +37,29 @@ int main(int argc, char **argv) {
 	gopher_addr_print(addr);
 	
 	/* Connect to the server. */
-	gopher_connect(addr);
+	ret = gopher_connect(addr);
+	if (ret != 0) {
+		perror("Failed to connect");
+		gopher_addr_free(addr);
+
+		return ret;
+	}
 	
-	/* Free up any resources. */
-	gopher_disconnect(addr);
+	/* Send selector of our request. */
+	ret = gopher_send(addr, "\r\n", NULL);
+	if (ret != 0) {
+		perror("Failed to send selector");
+		goto cleanup;
+	}
+	
+	/* Gracefully disconnect from the server. */
+	ret = gopher_disconnect(addr);
+	if (ret != 0)
+		perror("Failed to disconnect");
+
+cleanup:	
+	/* Free up any resources and return. */
 	gopher_addr_free(addr);
-	
 	return 0;
 }
 
