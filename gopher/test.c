@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 	}
 	
 	/* Send selector of our request. */
-	ret = gopher_send(addr, "\r\n", NULL);
+	ret = gopher_send_line(addr, "", NULL);
 	if (ret != 0) {
 		perror("Failed to send selector");
 		goto cleanup;

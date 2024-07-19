@@ -390,9 +390,57 @@ int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
  *
  * @return 0 if the operation was successful. Check return against strerror() in
  *         case of failure.
+ *
+ * @see gopher_send_raw
  */
 int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len) {
 	return gopher_send_raw(addr, (const void *)buf, strlen(buf), sent_len);
+}
+
+/**
+ * Sends a string to a gopher server automatically appending a CRLF.
+ *
+ * @param addr     Gopherspace address object.
+ * @param buf      String to be sent.
+ * @param sent_len Pointer to store the number of bytes actually sent. Ignored
+ *                 if NULL is passed.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ *
+ * @see gopher_send
+ */
+int gopher_send_line(const gopher_addr_t *addr, const char *buf,
+					 size_t *sent_len) {
+	size_t len;
+	char *nbuf;
+	char *n;
+	const char *b;
+	
+	/* Get string length and allocate a buffer big enough for it plus CRLF. */
+	len = strlen(buf) + 2;
+	nbuf = (char *)malloc((len + 1) * sizeof(char));
+	
+	/* Copy the string over and append CRLF very fast. */
+	b = buf;
+	n = nbuf;
+	while (*b != '\0') {
+		*n = *b;
+		n++;
+		b++;
+	}
+	*n = '\r';
+	n++;
+	*n = '\n';
+	n++;
+	*n = '\0';
+	
+#ifdef DEBUG
+	log_printf(LOG_INFO, "Sent: \"%s\"\n", nbuf);
+#endif /* DEBUG */
+	
+	/* Send the line over the network. */
+	return gopher_send_raw(addr, (void *)nbuf, len, sent_len);
 }
 
 #ifdef DEBUG
