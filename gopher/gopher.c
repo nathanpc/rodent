@@ -147,6 +147,8 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  * @param ai   IP address information structure to be allocated and populated.
  *
  * @return 0 if the operation was successful.
+ *
+ * @see getaddrinfo
  */
 int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
 	struct addrinfo hints;
@@ -221,6 +223,8 @@ void gopher_addr_free(gopher_addr_t *addr) {
  *
  * @return 0 if the operation was successful. Check return against strerror() in
  *         case of failure.
+ *
+ * @see gopher_disconnect
  */
 int gopher_connect(gopher_addr_t *addr) {
 	int ret;
@@ -304,6 +308,8 @@ int gopher_connect(gopher_addr_t *addr) {
  *
  * @return 0 if the operation was successful. Check return against strerror() in
  *         case of failure.
+ *
+ * @see gopher_connect
  */
 int gopher_disconnect(gopher_addr_t *addr) {
 	int ret;
@@ -353,6 +359,8 @@ int gopher_disconnect(gopher_addr_t *addr) {
  *
  * @return 0 if the operation was successful. Check return against strerror() in
  *         case of failure.
+ *
+ * @see send
  */
 int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
 					size_t *sent_len) {
@@ -361,8 +369,7 @@ int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
 	/* Try to send some information through a socket. */
 	bytes_sent = send(addr->sockfd, buf, len, 0);
 	if (bytes_sent == SOCKET_ERROR) {
-		log_sockerrno(LOG_ERROR, "Failed to send raw data over socket",
-			sockerrno);
+		log_sockerrno(LOG_ERROR, "Failed to send data over socket", sockerrno);
 		return sockerrno;
 	}
 
@@ -401,11 +408,14 @@ int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len) {
 #ifdef _WIN32
 /**
  * Converts a UTF-16 wide-character string into a UTF-8 multibyte string.
- * @warning This function allocates memory that must be free'd by you!
+ *
+ * @warning This function dinamically allocates memory.
  *
  * @param wstr UTF-16 string to be converted.
  *
  * @return UTF-8 multibyte converted string or NULL if an error occurred.
+ *
+ * @see WideCharToMultiByte
  */
 char *win_wcstombs(const wchar_t *wstr) {
 	char *str;
@@ -447,6 +457,9 @@ failure:
  *
  * @return 0 if the operation was successful. Check return against strerror() in
  *         case of failure.
+ *
+ * @see inet_ntop
+ * @see WSAAddressToString
  */
 int sockaddrstr(char **buf, const struct sockaddr *sock_addr) {
 #ifdef _WIN32
