@@ -75,10 +75,16 @@ typedef enum {
 	LOG_INFO
 } log_level_t;
 
+#ifdef DEBUG
 /* Logging private methods. */
 void log_printf(log_level_t level, const char *format, ...);
 void log_errno(log_level_t level, const char *msg);
 void log_sockerrno(log_level_t level, const char *msg, int err);
+#else
+#define log_printf(...) (void)0
+#define log_errno(l, m) (void)0
+#define log_sockerrno(l, m, e) (void)0
+#endif /* DEBUG */
 
 /* Private methods. */
 int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
@@ -382,6 +388,8 @@ int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len) {
 	return gopher_send_raw(addr, (const void *)buf, strlen(buf), sent_len);
 }
 
+#ifdef DEBUG
+
 /*
  * +===========================================================================+
  * |                                                                           |
@@ -602,3 +610,5 @@ void log_printf(log_level_t level, const char *format, ...) {
 	vfprintf(stderr, format, args);
 	va_end(args);
 }
+
+#endif /* DEBUG */
