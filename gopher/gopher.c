@@ -89,12 +89,15 @@ void log_sockerrno(log_level_t level, const char *msg, int err);
 #define log_sockerrno(l, m, e) (void)0
 #endif /* DEBUG */
 
-/* Private methods. */
-int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
-int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai);
+/* Private utility methods. */
+const char *strdupsep(char **buf, const char *str, char sep);
 #ifdef _WIN32
 char *win_wcstombs(const wchar_t *wstr);
 #endif /* _WIN32 */
+
+/* Private methods. */
+int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
+int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai);
 
 /*
  * +===========================================================================+
@@ -175,13 +178,13 @@ int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
  * @param addr Gopherspace address object.
  */
 void gopher_addr_print(const gopher_addr_t *addr) {
-	/* Is this a valid address? */
+	/* Is this a valid object? */
 	if (addr == NULL) {
 		printf("(null)\n");
 		return;
 	}
 	
-	/* Print out the address data. */
+	/* Print out the object data. */
 	printf("%s [%u] %s\n", addr->host, addr->port, addr->selector);
 }
 
@@ -346,6 +349,274 @@ int gopher_disconnect(gopher_addr_t *addr) {
 /*
  * +===========================================================================+
  * |                                                                           |
+ * |                             Item Line Parsing                             |
+ * |                                                                           |
+ * +===========================================================================+
+ */
+
+/**
+ * Parses a line received from a server into an item object.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param item Pointer to location where the parsed line will be stored.
+ * @param line Line as received from the server.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ *
+ * @see gopher_recv_line
+ * @see gopher_item_free
+ */
+int gopher_item_parse(gopher_item_t **item, const char *line) {
+	gopher_item_t *it;
+	const char *p;
+	char *selector;
+	char *host;
+	char *port;
+	
+	/* Am I a joke to you? */
+	if ((item == NULL) || (line == NULL)) {
+		log_printf(LOG_ERROR, "Item or line for parsing are NULL\n");
+		return -1;
+	}
+	
+	/* I can't parse a dot. */
+	if (gopher_is_termline(line)) {
+		log_printf(LOG_ERROR, "Tried to parse the termination line\n");
+		return -1;
+	}
+	
+	/* Allocate the item object. */
+	*item = (gopher_item_t *)malloc(sizeof(gopher_item_t));
+	it = *item;
+	if (it == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate memory for parsed line item");
+		return errno;
+	}
+	
+	/* Initialize the object with sane defaults. */
+	it->label = NULL;
+	it->addr = NULL;
+	it->next = NULL;
+	selector = NULL;
+	host = NULL;
+	port = NULL;
+	
+	/* Start parsing the line with the type and label. */
+	p = line;
+	it->type = *p++;
+	p = strdupsep(&it->label, p, '\t');
+	if (p == NULL) {
+		log_errno(LOG_ERROR, "Failed to duplicate label string");
+		gopher_item_free(it, 1);
+		it = NULL;
+		goto cleanup;
+	}
+	
+	/* Parse the selector. */
+	p++;
+	p = strdupsep(&selector, p, '\t');
+	if (p == NULL) {
+		log_errno(LOG_ERROR, "Failed to duplicate selector string");
+		gopher_item_free(it, 1);
+		it = NULL;
+		goto cleanup;
+	}
+
+	/* Parse the host. */
+	p++;
+	p = strdupsep(&host, p, '\t');
+	if (p == NULL) {
+		log_errno(LOG_ERROR, "Failed to duplicate host string");
+		gopher_item_free(it, 1);
+		it = NULL;
+		goto cleanup;
+	}
+
+	/* Parse the port. */
+	p++;
+	p = strdupsep(&port, p, '\r');
+	if (p == NULL) {
+		log_errno(LOG_ERROR, "Failed to duplicate port string");
+		gopher_item_free(it, 1);
+		it = NULL;
+		goto cleanup;
+	}
+	
+	/* Finally create the address object. */
+	it->addr = gopher_addr_new(host, (uint16_t)atoi(port), selector);
+	if (it->addr == NULL) {
+		log_errno(LOG_ERROR, "Failed to create address object for parsed line");
+		gopher_item_free(it, 1);
+		it = NULL;
+		goto cleanup;
+	}
+	
+cleanup:
+	/* Free up resources. */
+	if (selector)
+		free(selector);
+	if (host)
+		free(host);
+	if (port)
+		free(port);
+	
+	return errno;
+}
+
+/**
+ * Prints debugging information about a Gopher item type.
+ *
+ * @warning This function is not thread-safe!
+ *
+ * @param item Gopher item to have its type printed out.
+ */
+void gopher_item_print_type(const gopher_item_t *item) {
+	/* Regex to get this from gopher_type_t definition: */
+	/* s/\s+GOPHER_TYPE_([^\s]+)\s+= '([^'])'(,?)/
+	   case GOPHER_TYPE_$1:\n\tprintf("[$1]");\n\tbreak;\n/g */
+	switch (item->type) {
+		case GOPHER_TYPE_TEXT:
+			printf("[TEXT]");
+			break;
+		case GOPHER_TYPE_DIR:
+			printf("[DIR]");
+			break;
+		case GOPHER_TYPE_CSO:
+			printf("[CSO]");
+			break;
+		case GOPHER_TYPE_ERROR:
+			printf("[ERROR]");
+			break;
+		case GOPHER_TYPE_BINHEX:
+			printf("[BINHEX]");
+			break;
+		case GOPHER_TYPE_DOS:
+			printf("[DOS]");
+			break;
+		case GOPHER_TYPE_UNIX:
+			printf("[UNIX]");
+			break;
+		case GOPHER_TYPE_SEARCH:
+			printf("[SEARCH]");
+			break;
+		case GOPHER_TYPE_TELNET:
+			printf("[TELNET]");
+			break;
+		case GOPHER_TYPE_BINARY:
+			printf("[BINARY]");
+			break;
+		case GOPHER_TYPE_MIRROR:
+			printf("[MIRROR]");
+			break;
+		case GOPHER_TYPE_TN3270:
+			printf("[TN3270]");
+			break;
+		case GOPHER_TYPE_GIF:
+			printf("[GIF]");
+			break;
+		case GOPHER_TYPE_IMAGE:
+			printf("[IMAGE]");
+			break;
+		case GOPHER_TYPE_BITMAP:
+			printf("[BITMAP]");
+			break;
+		case GOPHER_TYPE_MOVIE:
+			printf("[MOVIE]");
+			break;
+		case GOPHER_TYPE_AUDIO:
+			printf("[AUDIO]");
+			break;
+		case GOPHER_TYPE_DOC:
+			printf("[DOC]");
+			break;
+		case GOPHER_TYPE_HTML:
+			printf("[HTML]");
+			break;
+		case GOPHER_TYPE_INFO:
+			printf("[INFO]");
+			break;
+		case GOPHER_TYPE_PNG:
+			printf("[PNG]");
+			break;
+		case GOPHER_TYPE_WAV:
+			printf("[WAV]");
+			break;
+		case GOPHER_TYPE_PDF:
+			printf("[PDF]");
+			break;
+		case GOPHER_TYPE_XML:
+			printf("[XML]");
+			break;
+		default:
+			printf("[UNKNOWN]");
+			break;
+	}
+}
+
+/**
+ * Prints debugging information about a Gopher item object.
+ *
+ * @param item Gopher item to have its information printed out.
+ */
+void gopher_item_print(const gopher_item_t *item) {
+	/* Is this a valid object? */
+	if (item == NULL) {
+		printf("(null)\n");
+		return;
+	}
+	
+	/* Print out the object data. */
+	gopher_item_print_type(item);
+	printf("\t'%s'\t'%s'\t%s:%u", item->label, item->addr->selector,
+		item->addr->host, item->addr->port);
+	if (item->next != NULL) {
+		printf("\t->%p\n", item->next);
+	} else {
+		printf("\n");
+	}
+}
+
+/**
+ * Frees a Gopher item object.
+ *
+ * @param item    Gopher item object to be free'd.
+ * @param recurse Recursively free next items as well?
+ */
+void gopher_item_free(gopher_item_t *item, int recurse) {
+	/* Is this even necessary? */
+	if (item == NULL)
+		return;
+
+	/* Free the object's members. */
+	if (item->label)
+		free(item->label);
+	if (item->addr)
+		gopher_addr_free(item->addr);
+	if (recurse && item->next)
+		gopher_item_free(item->next, recurse);
+
+	/* Free the object itself. */
+	free(item);
+}
+
+/**
+ * Checks if a received line is in fact the termination one with a single dot.
+ *
+ * @param line Received line to be checked.
+ *
+ * @return TRUE if the line is the last one to be transmitted before closing the
+ *         connection.
+ */
+int gopher_is_termline(const char *line) {
+	return (line != NULL) && (line[0] == '.') && (line[1] == '\r') &&
+		(line[2] == '\n');
+}
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
  * |                     Socket and Networking Abstrations                     |
  * |                                                                           |
  * +===========================================================================+
@@ -484,7 +755,7 @@ int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
 		*recv_len = bytes_recv;
 
 	/* Check if the connection was closed gracefully by the server. */
-	if (bytes_recv == 0)
+	if ((bytes_recv == 0) && !(flags | MSG_PEEK))
 		log_printf(LOG_INFO, "Connection closed gracefully by server\n");
 
 	return 0;
@@ -512,6 +783,7 @@ int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
 	int ret;
 	
 	/* Ensure we read an entire line. */
+	ret = 0;
 	line_len = 0;
 	while (ret == 0) {
 		size_t i;
@@ -519,8 +791,10 @@ int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
 		/* Peek at the incoming data. */
 		ret = gopher_recv_raw(addr, buf, RECV_LINE_BUF - 1, &recv_len,
 			MSG_PEEK);
-		if ((ret == 0) && (recv_len == 0))
+		if ((ret == 0) && (recv_len == 0)) {
+			*line = NULL;
 			return 0;
+		}
 		if ((ret != 0) || (recv_len == 0)) {
 			log_printf(LOG_ERROR, "Failed to peek at received line\n");
 			*line = NULL;
@@ -529,6 +803,7 @@ int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
 
 			return ret;
 		}
+		buf[recv_len] = '\0';
 
 		/* Go through the received data looking for the end of the line. */
 		for (i = 0; i < recv_len; i++) {
@@ -577,45 +852,6 @@ int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
  * |                                                                           |
  * +===========================================================================+
  */
-
-#ifdef _WIN32
-/**
- * Converts a UTF-16 wide-character string into a UTF-8 multibyte string.
- *
- * @warning This function dinamically allocates memory.
- *
- * @param wstr UTF-16 string to be converted.
- *
- * @return UTF-8 multibyte converted string or NULL if an error occurred.
- *
- * @see WideCharToMultiByte
- */
-char *win_wcstombs(const wchar_t *wstr) {
-	char *str;
-	int nLen;
-
-	/* Get required buffer size and allocate some memory for it. */
-	nLen = WideCharToMultiByte(CP_OEMCP, 0, wstr, -1, NULL, 0, NULL, NULL);
-	if (nLen == 0)
-		goto failure;
-	str = (char *)malloc(nLen * sizeof(char));
-	if (str == NULL)
-		return NULL;
-
-	/* Perform the conversion. */
-	nLen = WideCharToMultiByte(cap_utf8() ? CP_UTF8 : CP_OEMCP, 0, wstr, -1,
-							   str, nLen, NULL, NULL);
-	if (nLen == 0) {
-failure:
-		MessageBox(NULL, _T("Failed to convert UTF-16 string to UTF-8."),
-			_T("String Conversion Failure"), MB_ICONERROR | MB_OK);
-
-		return NULL;
-	}
-
-	return str;
-}
-#endif /* _WIN32 */
 
 /**
  * Converts an IPv4 or IPv6 address from binary to a presentation format string
@@ -798,3 +1034,98 @@ void log_printf(log_level_t level, const char *format, ...) {
 }
 
 #endif /* DEBUG */
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
+ * |                             Utility Functions                             |
+ * |                                                                           |
+ * +===========================================================================+
+ */
+
+/**
+ * Duplicates a string until a separator or termination character.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param buf Pointer to location where the string will be stored.
+ * @param str Original string to be duplicated.
+ * @param sep Separator character.
+ *
+ * @return Pointer to the separator or termination character in the original
+ *         string.
+ */
+const char *strdupsep(char **buf, const char *str, char sep) {
+	const char *s;
+	const char *send;
+	char *p;
+
+	/* Get position of the separator. */
+	s = str;
+	do {
+		send = s++;
+	} while ((*send != sep) && (*send != '\0'));
+	
+	/* Detect invalid position. */
+	if ((send - str) == 0) {
+		*buf = strdup("");
+		return str;
+	}
+
+	/* Allocate memory for our string. */
+	*buf = (char *)malloc((send - str + 1) * sizeof(char));
+	if (*buf == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate memory for string "
+			"duplication");
+		return NULL;
+	}
+
+	/* Copy the string over. */
+	s = str;
+	p = *buf;
+	do {
+		*p++ = *s++;
+	} while (s != send);
+	*p = '\0';
+
+	return send;
+}
+
+#ifdef _WIN32
+/**
+ * Converts a UTF-16 wide-character string into a UTF-8 multibyte string.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param wstr UTF-16 string to be converted.
+ *
+ * @return UTF-8 multibyte converted string or NULL if an error occurred.
+ *
+ * @see WideCharToMultiByte
+ */
+char *win_wcstombs(const wchar_t *wstr) {
+	char *str;
+	int nLen;
+
+	/* Get required buffer size and allocate some memory for it. */
+	nLen = WideCharToMultiByte(CP_OEMCP, 0, wstr, -1, NULL, 0, NULL, NULL);
+	if (nLen == 0)
+		goto failure;
+	str = (char *)malloc(nLen * sizeof(char));
+	if (str == NULL)
+		return NULL;
+
+	/* Perform the conversion. */
+	nLen = WideCharToMultiByte(cap_utf8() ? CP_UTF8 : CP_OEMCP, 0, wstr, -1,
+							   str, nLen, NULL, NULL);
+	if (nLen == 0) {
+failure:
+		MessageBox(NULL, _T("Failed to convert UTF-16 string to UTF-8."),
+			_T("String Conversion Failure"), MB_ICONERROR | MB_OK);
+
+		return NULL;
+	}
+
+	return str;
+}
+#endif /* _WIN32 */

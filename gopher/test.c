@@ -53,12 +53,27 @@ int main(int argc, char **argv) {
 	}
 
 	/* Print out every line we receive from the server. */
+	line = NULL;
+	len = 0;
 	while (gopher_recv_line(addr, &line, &len) == 0) {
+		gopher_item_t *item;
+
 		/* Check if we have terminated the connection. */
-		if (line == NULL)
+		if ((line == NULL) || gopher_is_termline(line))
 			break;
+
+		/* Parse line item and print it out. */
+		ret = gopher_item_parse(&item, line);
+		if (ret != 0) {
+			perror("Failed to parse line item");
+			free(line);
+			break;
+		}
+		gopher_item_print(item);
 		
-		printf("%s", line);
+		/* Clean up any temporary resources. */
+		gopher_item_free(item, 1);
+
 		free(line);
 		line = NULL;
 	}

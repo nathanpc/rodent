@@ -27,10 +27,40 @@ extern "C" {
 
 
 /**
+ * Gopher data types.
+ */
+typedef enum {
+	GOPHER_TYPE_TEXT   = '0',
+	GOPHER_TYPE_DIR    = '1',
+	GOPHER_TYPE_CSO    = '2',
+	GOPHER_TYPE_ERROR  = '3',
+	GOPHER_TYPE_BINHEX = '4',
+	GOPHER_TYPE_DOS    = '5',
+	GOPHER_TYPE_UNIX   = '6',
+	GOPHER_TYPE_SEARCH = '7',
+	GOPHER_TYPE_TELNET = '8',
+	GOPHER_TYPE_BINARY = '9',
+	GOPHER_TYPE_MIRROR = '+',
+	GOPHER_TYPE_TN3270 = 'T',
+	GOPHER_TYPE_GIF    = 'g',
+	GOPHER_TYPE_IMAGE  = 'I',
+	GOPHER_TYPE_BITMAP = ':',
+	GOPHER_TYPE_MOVIE  = ';',
+	GOPHER_TYPE_AUDIO  = '<',
+	GOPHER_TYPE_DOC    = 'd',
+	GOPHER_TYPE_HTML   = 'h',
+	GOPHER_TYPE_INFO   = 'i',
+	GOPHER_TYPE_PNG    = 'p',
+	GOPHER_TYPE_WAV    = 's',
+	GOPHER_TYPE_PDF    = 'P',
+	GOPHER_TYPE_XML    = 'X'
+} gopher_type_t;
+
+/**
  * Gopherspace address including host, port, and selector, also includes the
  * connection information.
  */
-typedef struct {
+typedef struct gopher_addr_s {
 	char *host;
 	char *selector;
 	uint16_t port;
@@ -39,6 +69,16 @@ typedef struct {
 	struct sockaddr_in *ipaddr;
 	socklen_t ipaddr_len;
 } gopher_addr_t;
+
+/**
+ * Gopher line item object.
+ */
+typedef struct gopher_item_s {
+	char *label;
+	gopher_addr_t *addr;
+	struct gopher_item_s *next;
+	char type;
+} gopher_item_t;
 
 /* Gopherspace address handling. */
 gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
@@ -50,6 +90,11 @@ void gopher_addr_free(gopher_addr_t *addr);
 int gopher_connect(gopher_addr_t *addr);
 int gopher_disconnect(gopher_addr_t *addr);
 
+/* Item line parsing */
+int gopher_item_parse(gopher_item_t **item, const char *line);
+void gopher_item_free(gopher_item_t *item, int recurse);
+int gopher_is_termline(const char *line);
+
 /* Networking operations. */
 int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
 					size_t *sent_len);
@@ -59,6 +104,12 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
 					size_t *recv_len, int flags);
 int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len);
+
+/* Debugging */
+void gopher_addr_print(const gopher_addr_t *addr);
+void gopher_item_print_type(const gopher_item_t *item);
+void gopher_item_print(const gopher_item_t *item);
+
 
 #ifdef __cplusplus
 }
