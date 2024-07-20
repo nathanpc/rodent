@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 	}
 
 	/* Print out everything we receive from the server. */
-	while (gopher_recv_raw(addr, buf, 99, &len, 0) == 0) {
+	while ((gopher_recv_raw(addr, buf, 99, &len, 0) == 0) && (len > 0)) {
 		/* Ensure we terminate the received string. */
 		buf[len] = '\0';
 		printf("%s", buf);

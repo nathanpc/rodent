@@ -449,9 +449,9 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
  * @param addr     Gopherspace address object.
  * @param buf      Buffer to store the received data.
  * @param buf_len  Length of the buffer to store the data.
- * @param recv_len Pointer to store the number of bytes actually received. Will
- *                 be ignored if NULL is passed.
- * @param peek     Should we just peek at the data to be received?
+ * @param recv_len Optional. Pointer to store the number of bytes actually
+ *                 received.
+ * @param flags    Flags to be passed to recv().
  *
  * @return 0 if the operation was successful. Check return against strerror() in
  *         case of failure.
@@ -459,7 +459,7 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
  * @see recv
  */
 int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
-					size_t *recv_len, int peek) {
+					size_t *recv_len, int flags) {
 	size_t bytes_recv;
 	ssize_t len;
 
@@ -467,34 +467,14 @@ int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
 	if (addr->sockfd == INVALID_SOCKET)
 		return EBADF;
 
-	if (peek) {
-		/* Peek at the data in the queue. */
-		len = recv(addr->sockfd, buf, buf_len, MSG_PEEK);
-		if (len == SOCKET_ERROR) {
-			log_sockerrno(LOG_ERROR, "Failed to peek at data from socket",
-				sockerrno);
-			return sockerrno;
-		}
-
-		bytes_recv = len;
-	} else {
-		uint8_t *tmp;
-
-		tmp = (uint8_t *)buf;
-		bytes_recv = 0;
-		while (bytes_recv < buf_len) {
-			/* Try to read all the information from a socket. */
-			len = recv(addr->sockfd, tmp, buf_len - bytes_recv, 0);
-			if (len == SOCKET_ERROR) {
-				log_sockerrno(LOG_ERROR, "Failed to receive data from socket",
-					sockerrno);
-				return sockerrno;
-			}
-
-			bytes_recv += len;
-			tmp += len;
-		}
+	/* Receive data from the socket. */
+	len = recv(addr->sockfd, buf, buf_len, flags);
+	if (len == SOCKET_ERROR) {
+		log_sockerrno(LOG_ERROR, "Failed to receive data from socket",
+			sockerrno);
+		return sockerrno;
 	}
+	bytes_recv = len;
 
 	/* Return the number of bytes sent. */
 	if (recv_len != NULL)
