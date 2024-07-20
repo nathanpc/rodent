@@ -67,6 +67,9 @@
 #define FORMAT_MESSAGE_LANG MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)
 #endif /* _WIN32 */
 
+/* Gopher line receive buffer size. */
+#define RECV_LINE_BUF 300
+
 /* Log levels. */
 typedef enum {
 	LOG_FATAL = 0,
@@ -476,7 +479,7 @@ int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
 	}
 	bytes_recv = len;
 
-	/* Return the number of bytes sent. */
+	/* Return the number of bytes received. */
 	if (recv_len != NULL)
 		*recv_len = bytes_recv;
 
@@ -484,6 +487,84 @@ int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
 	if (bytes_recv == 0)
 		log_printf(LOG_INFO, "Connection closed gracefully by server\n");
 
+	return 0;
+}
+
+/**
+ * Receive an entire line from a gopher server.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param addr Gopherspace address object.
+ * @param line Pointer to location where the received line including the CRLF
+ *             characters will be stored.
+ * @param len  Optional. Pointer to store the number of bytes actually received.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ *
+ * @see gopher_recv_raw
+ */
+int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
+	char buf[RECV_LINE_BUF];
+	size_t line_len;
+	size_t recv_len;
+	int ret;
+	
+	/* Ensure we read an entire line. */
+	line_len = 0;
+	while (ret == 0) {
+		size_t i;
+
+		/* Peek at the incoming data. */
+		ret = gopher_recv_raw(addr, buf, RECV_LINE_BUF - 1, &recv_len,
+			MSG_PEEK);
+		if ((ret == 0) && (recv_len == 0))
+			return 0;
+		if ((ret != 0) || (recv_len == 0)) {
+			log_printf(LOG_ERROR, "Failed to peek at received line\n");
+			*line = NULL;
+			if (len != NULL)
+				*len = 0;
+
+			return ret;
+		}
+
+		/* Go through the received data looking for the end of the line. */
+		for (i = 0; i < recv_len; i++) {
+			if ((buf[i] == '\r') && ((i + 1) < recv_len) &&
+					(buf[i + 1] == '\n')) {
+				line_len += 2;
+				ret = 1;
+				break;
+			}
+
+			line_len++;
+		}
+	}
+
+	/* Allocate memory to hold our line. */
+	*line = (char *)malloc((line_len + 1) * sizeof(char));
+	if (*line == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate memory for received line");
+		return errno;
+	}
+	
+	/* Read the line into our return buffer. */
+	ret = gopher_recv_raw(addr, (void *)*line, line_len, &recv_len, 0);
+	(*line)[line_len] = '\0';
+	if (ret != 0) {
+		log_printf(LOG_ERROR, "Failed to read received line\n");
+		free(*line);
+		*line = NULL;
+
+		return ret;
+	}
+	
+	/* Return the length of the line with the CRLF characters. */
+	if (len != NULL)
+		*len = line_len;
+	
 	return 0;
 }
 

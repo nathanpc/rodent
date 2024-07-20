@@ -23,7 +23,7 @@
 int main(int argc, char **argv) {
 	gopher_addr_t *addr;
 	int ret;
-	char buf[100];
+	char *line;
 	size_t len;
 
 	printf("libgopher v" LIBGOPHER_VER_STR " tester\n");
@@ -42,9 +42,7 @@ int main(int argc, char **argv) {
 	ret = gopher_connect(addr);
 	if (ret != 0) {
 		perror("Failed to connect");
-		gopher_addr_free(addr);
-
-		return ret;
+		goto cleanup;
 	}
 	
 	/* Send selector of our request. */
@@ -54,11 +52,15 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	/* Print out everything we receive from the server. */
-	while ((gopher_recv_raw(addr, buf, 99, &len, 0) == 0) && (len > 0)) {
-		/* Ensure we terminate the received string. */
-		buf[len] = '\0';
-		printf("%s", buf);
+	/* Print out every line we receive from the server. */
+	while (gopher_recv_line(addr, &line, &len) == 0) {
+		/* Check if we have terminated the connection. */
+		if (line == NULL)
+			break;
+		
+		printf("%s", line);
+		free(line);
+		line = NULL;
 	}
 	
 	/* Gracefully disconnect from the server. */
