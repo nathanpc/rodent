@@ -104,6 +104,7 @@ typedef struct gopher_dir_s {
 /* Gopherspace address handling. */
 gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 							   const char *selector);
+gopher_addr_t *gopher_addr_parse(const char *uri);
 void gopher_addr_print(const gopher_addr_t *addr);
 void gopher_addr_free(gopher_addr_t *addr);
 

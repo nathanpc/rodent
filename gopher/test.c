@@ -36,7 +36,8 @@ int main(int argc, char **argv) {
 		printf("No address was supplied, using floodgap's for testing.\n");
 		addr = gopher_addr_new("gopher.floodgap.com", 70, "/overbite");
 	} else {
-		/* TODO: Parse Gopher URI from command line. */
+		/* Parse Gopher URI from argument. */
+		addr = gopher_addr_parse(argv[1]);
 	}
 	
 	/* Ensure we got a gopherspace address. */

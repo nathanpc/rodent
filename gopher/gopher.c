@@ -114,11 +114,12 @@ gopher_dir_t *gopher_dir_new(gopher_addr_t *addr);
  *
  * @warning This function dinamically allocates memory.
  *
- * @param host     Domain name or IP address of the Gopher server.
+ * @param host     Optional. Domain name or IP address of the Gopher server.
  * @param port     Port to use for communicating with the Gopher server.
- * @param selector Selector of the content to retrieve.
+ * @param selector Optional. Selector of the content to retrieve.
  *
- * @return Newly populated gopherspace address object.
+ * @return Newly populated gopherspace address object. NULL if an error
+ *         occurred. Check errno case of failure.
  *
  * @see gopher_addr_free
  */
@@ -135,12 +136,89 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 	}
 
 	/* Populate the object. */
-	addr->host = strdup(host);
+	addr->host = (host) ? strdup(host) : NULL;
 	addr->port = port;
 	addr->selector = (selector) ? strdup(selector) : NULL;
 	addr->sockfd = INVALID_SOCKET;
 	addr->ipaddr = NULL;
 	addr->ipaddr_len = 0;
+
+	return addr;
+}
+
+/**
+ * Parses a gopherspace address from an URI conforming to RFC 4266.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param uri Universal Resource Identifier of the gopherspace.
+ *
+ * @return Newly parsed gopherspace address object or NULL if a parsing error
+ *         occurred. Check errno case of failure.
+ *
+ * @see gopher_addr_new
+ * @see gopher_addr_free
+ */
+gopher_addr_t *gopher_addr_parse(const char *uri) {
+	gopher_addr_t *addr;
+	const char *p;
+	const char *pend;
+	
+	/* Check if it starts with protocol. */
+	p = strstr(uri, "gopher://");
+	if (p != NULL) {
+		/* Jump past the protocol part. */
+		p += 9;
+	} else {
+		/* Ensure we have the right protocol. */
+		if (strstr(uri, "://") != NULL) {
+			log_printf(LOG_ERROR, "Tried parsing URI for other protocol\n");
+			return NULL;
+		}
+	}
+	
+	/* Create the address object. */
+	addr = gopher_addr_new(NULL, 70, NULL);
+	if (addr == NULL)
+		return NULL;
+
+	/* Get host from URI. */
+	pend = strpbrk(p, ":/");
+	if (pend == NULL) {
+		/* Top level URI. */
+		addr->host = strdup(p);
+		return addr;
+	}
+	strdupsep(&addr->host, p, *pend);
+
+	/* Get port if there's one. */
+	if (*pend == ':') {
+		char *port;
+
+		/* Get port string. */
+		p = pend + 1;
+		pend = strpbrk(p, "/");
+		if (pend == NULL) {
+			port = strdup(p);
+		} else {
+			strdupsep(&port, p, *pend);
+		}
+		
+		/* Set port in address object. */
+		addr->port = (uint16_t)atoi(port);
+		free(port);
+	}
+	
+	/* Jump type identifier. */
+	p = pend + 1;
+	if (*p == '\0')
+		return addr;
+	p++;
+	
+	/* Get the selector. */
+	if (*(p + 1) == '\0')
+		return addr;
+	addr->selector = strdup(p);
 
 	return addr;
 }
@@ -154,7 +232,8 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  * @param addr Gopherspace address object.
  * @param ai   IP address information structure to be allocated and populated.
  *
- * @return 0 if the operation was successful.
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
  *
  * @see getaddrinfo
  */
@@ -209,7 +288,7 @@ void gopher_addr_free(gopher_addr_t *addr) {
 	if (addr->ipaddr)
 		free(addr->ipaddr);
 	if (addr->sockfd != INVALID_SOCKET) {
-		log_printf(LOG_WARNING, "Disconnecting the socket on address free");
+		log_printf(LOG_WARNING, "Disconnecting the socket on address free\n");
 		gopher_disconnect(addr);
 	}
 	
@@ -417,7 +496,7 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 	int ret;
 	
 	/* Send selector of our request. */
-	ret = gopher_send_line(addr, addr->selector, NULL);
+	ret = gopher_send_line(addr, (addr->selector) ? addr->selector : "", NULL);
 	if (ret != 0) {
 		log_errno(LOG_ERROR, "Failed to send line during directory request");
 		return ret;
@@ -898,7 +977,7 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 	char *nbuf;
 	char *n;
 	const char *b;
-	
+
 	/* Get string length and allocate a buffer big enough for it plus CRLF. */
 	len = strlen(buf) + 2;
 	nbuf = (char *)malloc((len + 1) * sizeof(char));
