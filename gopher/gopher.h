@@ -27,9 +27,19 @@ extern "C" {
 
 
 /**
+ * Recursive free direction.
+ */
+typedef enum {
+	RECURSE_NONE     = 0x00,
+	RECURSE_FORWARD  = 0x01,
+	RECURSE_BACKWARD = 0x02
+} gopher_recurse_dir_t;
+
+/**
  * Gopher data types.
  */
 typedef enum {
+	GOPHER_TYPE_INTERNAL = '\0',
 	GOPHER_TYPE_TEXT   = '0',
 	GOPHER_TYPE_DIR    = '1',
 	GOPHER_TYPE_CSO    = '2',
@@ -77,8 +87,19 @@ typedef struct gopher_item_s {
 	char *label;
 	gopher_addr_t *addr;
 	struct gopher_item_s *next;
-	char type;
+	gopher_type_t type;
 } gopher_item_t;
+
+/**
+ * Gopher directory object.
+ */
+typedef struct gopher_dir_s {
+	gopher_addr_t *addr;
+	struct gopher_dir_s *prev;
+	gopher_item_t *items;
+	struct gopher_dir_s *next;
+	size_t items_len;
+} gopher_dir_t;
 
 /* Gopherspace address handling. */
 gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
@@ -90,9 +111,14 @@ void gopher_addr_free(gopher_addr_t *addr);
 int gopher_connect(gopher_addr_t *addr);
 int gopher_disconnect(gopher_addr_t *addr);
 
+/* Directory handling. */
+int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir);
+void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
+					 int inclusive);
+
 /* Item line parsing */
 int gopher_item_parse(gopher_item_t **item, const char *line);
-void gopher_item_free(gopher_item_t *item, int recurse);
+void gopher_item_free(gopher_item_t *item, gopher_recurse_dir_t recurse);
 int gopher_is_termline(const char *line);
 
 /* Networking operations. */

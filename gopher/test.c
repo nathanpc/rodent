@@ -22,20 +22,31 @@
  */
 int main(int argc, char **argv) {
 	gopher_addr_t *addr;
+	gopher_item_t *item;
+	gopher_dir_t *dir;
 	int ret;
-	char *line;
-	size_t len;
 
+	/* Initialize the core. */
 	printf("libgopher v" LIBGOPHER_VER_STR " tester\n");
+	item = NULL;
+	dir = NULL;
 	
 	/* Use default address if none were supplied. */
 	if (argc < 2) {
 		printf("No address was supplied, using floodgap's for testing.\n");
 		addr = gopher_addr_new("gopher.floodgap.com", 70, "/overbite");
+	} else {
+		/* TODO: Parse Gopher URI from command line. */
+	}
+	
+	/* Ensure we got a gopherspace address. */
+	if (addr == NULL) {
+		printf("Failed to get gopherspace address\n");
+		return 1;
 	}
 	
 	/* Print information about the requested address. */
-	printf("requesting ");
+	printf("Requesting ");
 	gopher_addr_print(addr);
 	
 	/* Connect to the server. */
@@ -45,39 +56,24 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 	
-	/* Send selector of our request. */
-	ret = gopher_send_line(addr, "", NULL);
+	/* Get directory from address. */
+	ret = gopher_dir_request(addr, &dir);
 	if (ret != 0) {
-		perror("Failed to send selector");
+		perror("Failed to request directory");
 		goto cleanup;
 	}
 
-	/* Print out every line we receive from the server. */
-	line = NULL;
-	len = 0;
-	while (gopher_recv_line(addr, &line, &len) == 0) {
-		gopher_item_t *item;
-
-		/* Check if we have terminated the connection. */
-		if ((line == NULL) || gopher_is_termline(line))
-			break;
-
-		/* Parse line item and print it out. */
-		ret = gopher_item_parse(&item, line);
-		if (ret != 0) {
-			perror("Failed to parse line item");
-			free(line);
-			break;
-		}
-		gopher_item_print(item);
-		
-		/* Clean up any temporary resources. */
-		gopher_item_free(item, 1);
-
-		free(line);
-		line = NULL;
+	if (dir->items_len > 0) {
+		/* Print out every item from the directory. */
+		item = dir->items;
+		do {
+			gopher_item_print(item);
+			item = item->next;
+		} while (item != NULL);
+	} else {
+		printf("Empty directory.\n");
 	}
-	
+
 	/* Gracefully disconnect from the server. */
 	ret = gopher_disconnect(addr);
 	if (ret != 0)
@@ -85,7 +81,12 @@ int main(int argc, char **argv) {
 
 cleanup:	
 	/* Free up any resources and return. */
-	gopher_addr_free(addr);
+	if (dir == NULL) {
+		gopher_addr_free(addr);
+	} else {
+		gopher_dir_free(dir, RECURSE_FORWARD | RECURSE_BACKWARD, 1);
+	}
+
 	return 0;
 }
 

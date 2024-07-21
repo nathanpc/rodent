@@ -98,6 +98,8 @@ char *win_wcstombs(const wchar_t *wstr);
 /* Private methods. */
 int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
 int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai);
+gopher_item_t *gopher_item_new(gopher_type_t type, const char *label);
+gopher_dir_t *gopher_dir_new(gopher_addr_t *addr);
 
 /*
  * +===========================================================================+
@@ -127,8 +129,8 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 	/* Allocate the object. */
 	addr = (gopher_addr_t *)malloc(sizeof(gopher_addr_t));
 	if (addr == NULL) {
-		log_printf(LOG_ERROR, "Failed to allocate memory for gopherspace "
-			"address\n");
+		log_errno(LOG_ERROR, "Failed to allocate memory for gopherspace "
+			"address");
 		return NULL;
 	}
 
@@ -204,10 +206,11 @@ void gopher_addr_free(gopher_addr_t *addr) {
 	addr->port = 0;
 	if (addr->selector)
 		free(addr->selector);
-	if (addr->sockfd != INVALID_SOCKET)
-		gopher_disconnect(addr);
-	if (addr->ipaddr) {
+	if (addr->ipaddr)
 		free(addr->ipaddr);
+	if (addr->sockfd != INVALID_SOCKET) {
+		log_printf(LOG_WARNING, "Disconnecting the socket on address free");
+		gopher_disconnect(addr);
 	}
 	
 	/* Free the object itself. */
@@ -349,10 +352,208 @@ int gopher_disconnect(gopher_addr_t *addr) {
 /*
  * +===========================================================================+
  * |                                                                           |
+ * |                            Directory Handling                             |
+ * |                                                                           |
+ * +===========================================================================+
+ */
+
+/**
+ * Allocates and initializes a Gopher directory object.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param addr Gopherspace address object.
+ *
+ * @return Newly initialized Gopher directory object.
+ *
+ * @see gopher_dir_free
+ */
+gopher_dir_t *gopher_dir_new(gopher_addr_t *addr) {	
+	gopher_dir_t *dir;
+
+	/* Allocate the object. */
+	dir = (gopher_dir_t *)malloc(sizeof(gopher_dir_t));
+	if (dir == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate memory for Gopher directory");
+		return NULL;
+	}
+
+	/* Initialize the object. */
+	dir->addr = addr;
+	dir->prev = NULL;
+	dir->next = NULL;
+	dir->items = NULL;
+	dir->items_len = 0;
+
+	return dir;
+}
+
+/**
+ * Requests a directory from a Gopher server.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param addr Gopherspace address object already connected to the server.
+ * @param dir  Pointer to where the results of the directory will be stored.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ *
+ * @see gopher_dir_free
+ */
+int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
+	gopher_dir_t *pd;
+	gopher_item_t *prev;
+	char *line;
+	size_t len;
+	int ret;
+	
+	/* Send selector of our request. */
+	ret = gopher_send_line(addr, addr->selector, NULL);
+	if (ret != 0) {
+		log_errno(LOG_ERROR, "Failed to send line during directory request");
+		return ret;
+	}
+	
+	/* Initialize directory object. */
+	*dir = gopher_dir_new(addr);
+	pd = *dir;
+	if (*dir == NULL) {
+		log_errno(LOG_ERROR, "Failed to initialize directory object");
+		return -1;
+	}
+
+	/* Go through lines received from the server. */
+	prev = NULL;
+	line = NULL;
+	len = 0;
+	while (gopher_recv_line(addr, &line, &len) == 0) {
+		gopher_item_t *item;
+		
+		/* Check if we have reached the termination line. */
+		if (gopher_is_termline(line))
+			continue;
+
+		/* Check if we have terminated the connection. */
+		if (line == NULL)
+			break;
+
+		/* Parse line item. */
+		ret = gopher_item_parse(&item, line);
+		if (ret != 0) {
+			char *msg;
+			log_printf(LOG_WARNING, "Failed to parse line item during "
+				"directory request");
+
+			msg = (char *)malloc((20 + strlen(line)) * sizeof(char));
+			sprintf(msg, "PARSING FAILED: \"%s\"", line);
+			item = gopher_item_new(GOPHER_TYPE_INTERNAL, msg);
+			free(line);
+			free(msg);
+
+			break;
+		}
+
+		/* Push the item into the directory item stack. */
+		if (pd->items == NULL)
+			pd->items = item;
+		if (prev != NULL)
+			prev->next = item;
+		prev = item;
+		pd->items_len++;
+
+		/* Clean up any temporary resources. */
+		free(line);
+		line = NULL;
+	}
+	
+	return ret;
+}
+
+/**
+ * Frees a Gopher directory object.
+ *
+ * @param dir       Gopher directory object to be free'd.
+ * @param recurse   Bitwise field to recursively free its history stack.
+ * @param inclusive Should we also free ourselves? If FALSE will only free
+ *                  history in specified recurse direction.
+ */
+void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
+		int inclusive) {
+	/* Is this even necessary? */
+	if (dir == NULL)
+		return;
+
+	/* Free history backwards. */
+	if (dir->prev && (recurse | RECURSE_BACKWARD)) {
+		gopher_dir_free(dir->prev, RECURSE_BACKWARD, 1);
+		dir->prev = NULL;
+		if (inclusive && dir->next)
+			dir->next->prev = NULL;
+	}
+
+	/* Free history forwards. */
+	if (dir->next && (recurse | RECURSE_FORWARD)) {
+		gopher_dir_free(dir->next, RECURSE_FORWARD, 1);
+		dir->next = NULL;
+		if (inclusive && dir->prev)
+			dir->prev->next = NULL;
+	}
+
+	/* Free ourselves too. */
+	if (inclusive) {
+		/* Free the object's members. */
+		dir->items_len = 0;
+		if (dir->items)
+			gopher_item_free(dir->items, RECURSE_FORWARD);
+		if (dir->addr)
+			gopher_addr_free(dir->addr);
+
+		/* Free the object itself. */
+		free(dir);
+	}
+}
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
  * |                             Item Line Parsing                             |
  * |                                                                           |
  * +===========================================================================+
  */
+
+/**
+ * Allocates and initializes a Gopher line item object.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param type  File type of the item.
+ * @param label Optional. Label of the item.
+ *
+ * @return Newly initialized Gopher line item object.
+ *
+ * @see gopher_item_free
+ */
+gopher_item_t *gopher_item_new(gopher_type_t type, const char *label) {	
+	gopher_item_t *item;
+
+	/* Allocate the object. */
+	item = (gopher_item_t *)malloc(sizeof(gopher_item_t));
+	if (item == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate memory for Gopher item");
+		return NULL;
+	}
+
+	/* Initialize the object. */
+	item->type = type;
+	item->label = NULL;
+	if (label)
+		item->label = strdup(label);
+	item->addr = NULL;
+	item->next = NULL;
+
+	return item;
+}
 
 /**
  * Parses a line received from a server into an item object.
@@ -374,38 +575,34 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 	char *selector;
 	char *host;
 	char *port;
-	
+
 	/* Am I a joke to you? */
 	if ((item == NULL) || (line == NULL)) {
 		log_printf(LOG_ERROR, "Item or line for parsing are NULL\n");
 		return -1;
 	}
-	
+
 	/* I can't parse a dot. */
 	if (gopher_is_termline(line)) {
 		log_printf(LOG_ERROR, "Tried to parse the termination line\n");
 		return -1;
 	}
-	
-	/* Allocate the item object. */
-	*item = (gopher_item_t *)malloc(sizeof(gopher_item_t));
+
+	/* Initialize the item object. */
+	p = line;
+	*item = gopher_item_new((gopher_type_t)*p++, NULL);
 	it = *item;
 	if (it == NULL) {
 		log_errno(LOG_ERROR, "Failed to allocate memory for parsed line item");
 		return errno;
 	}
-	
-	/* Initialize the object with sane defaults. */
-	it->label = NULL;
-	it->addr = NULL;
-	it->next = NULL;
+
+	/* Initialize some parsed properties with sane defaults. */
 	selector = NULL;
 	host = NULL;
 	port = NULL;
-	
+
 	/* Start parsing the line with the type and label. */
-	p = line;
-	it->type = *p++;
 	p = strdupsep(&it->label, p, '\t');
 	if (p == NULL) {
 		log_errno(LOG_ERROR, "Failed to duplicate label string");
@@ -413,7 +610,7 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 		it = NULL;
 		goto cleanup;
 	}
-	
+
 	/* Parse the selector. */
 	p++;
 	p = strdupsep(&selector, p, '\t');
@@ -443,7 +640,7 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 		it = NULL;
 		goto cleanup;
 	}
-	
+
 	/* Finally create the address object. */
 	it->addr = gopher_addr_new(host, (uint16_t)atoi(port), selector);
 	if (it->addr == NULL) {
@@ -452,7 +649,7 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 		it = NULL;
 		goto cleanup;
 	}
-	
+
 cleanup:
 	/* Free up resources. */
 	if (selector)
@@ -477,6 +674,9 @@ void gopher_item_print_type(const gopher_item_t *item) {
 	/* s/\s+GOPHER_TYPE_([^\s]+)\s+= '([^'])'(,?)/
 	   case GOPHER_TYPE_$1:\n\tprintf("[$1]");\n\tbreak;\n/g */
 	switch (item->type) {
+		case GOPHER_TYPE_INTERNAL:
+			printf("<[INTERNAL]>");
+			break;
 		case GOPHER_TYPE_TEXT:
 			printf("[TEXT]");
 			break;
@@ -584,7 +784,7 @@ void gopher_item_print(const gopher_item_t *item) {
  * @param item    Gopher item object to be free'd.
  * @param recurse Recursively free next items as well?
  */
-void gopher_item_free(gopher_item_t *item, int recurse) {
+void gopher_item_free(gopher_item_t *item, gopher_recurse_dir_t recurse) {
 	/* Is this even necessary? */
 	if (item == NULL)
 		return;
@@ -594,7 +794,7 @@ void gopher_item_free(gopher_item_t *item, int recurse) {
 		free(item->label);
 	if (item->addr)
 		gopher_addr_free(item->addr);
-	if (recurse && item->next)
+	if (item->next && (recurse == RECURSE_FORWARD))
 		gopher_item_free(item->next, recurse);
 
 	/* Free the object itself. */
