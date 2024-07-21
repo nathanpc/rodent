@@ -321,20 +321,28 @@ int gopher_connect(gopher_addr_t *addr) {
  * @see gopher_connect
  */
 int gopher_disconnect(gopher_addr_t *addr) {
+	char c;
 	int ret;
 
 	/* Is this even a valid address or socket? */
 	if ((addr == NULL) || (addr->sockfd == INVALID_SOCKET))
 		return EBADF;
 
-	/* Shutdown the connection. */
-	#ifdef _WIN32
+	/* Check if a shutdown is needed. */
+	if (recv(addr->sockfd, &c, 1, MSG_PEEK) != 0) {
+		log_printf(LOG_INFO, "Socket still connected, performing shutdown\n");
+
+		/* Shutdown the connection. */
+#ifdef _WIN32
 		ret = shutdown(addr->sockfd, SD_BOTH);
-	#else
+#else
 		ret = shutdown(addr->sockfd, SHUT_RDWR);
-	#endif /* _WIN32 */	
-	if (ret == SOCKET_ERROR)
-		log_sockerrno(LOG_WARNING, "Failed to shutdown connection", sockerrno);
+#endif /* _WIN32 */
+		if (ret == SOCKET_ERROR) {
+			log_sockerrno(LOG_WARNING, "Failed to shutdown connection",
+				sockerrno);
+		}
+	}
 
 	/* Close the socket file descriptor. */
 #ifdef _WIN32
