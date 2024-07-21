@@ -63,9 +63,9 @@ int main(int argc, char **argv) {
 		perror("Failed to request directory");
 		goto cleanup;
 	}
-
+	
+	/* Print out every item from the directory. */
 	if (dir->items_len > 0) {
-		/* Print out every item from the directory. */
 		item = dir->items;
 		do {
 			gopher_item_print(item);
@@ -73,6 +73,12 @@ int main(int argc, char **argv) {
 		} while (item != NULL);
 	} else {
 		printf("Empty directory.\n");
+	}
+	
+	/* Shame non-compliant servers. */
+	if (dir->err_count > 0) {
+		printf("%u errors encountered while parsing the server's output\n",
+			dir->err_count);
 	}
 
 	/* Gracefully disconnect from the server. */

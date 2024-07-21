@@ -471,6 +471,7 @@ gopher_dir_t *gopher_dir_new(gopher_addr_t *addr) {
 	dir->next = NULL;
 	dir->items = NULL;
 	dir->items_len = 0;
+	dir->err_count = 0;
 
 	return dir;
 }
@@ -494,6 +495,7 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 	char *line;
 	size_t len;
 	int ret;
+	int termlined;
 	
 	/* Send selector of our request. */
 	ret = gopher_send_line(addr, (addr->selector) ? addr->selector : "", NULL);
@@ -511,6 +513,7 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 	}
 
 	/* Go through lines received from the server. */
+	termlined = 0;
 	prev = NULL;
 	line = NULL;
 	len = 0;
@@ -518,12 +521,20 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		gopher_item_t *item;
 		
 		/* Check if we have reached the termination line. */
-		if (gopher_is_termline(line))
+		if (gopher_is_termline(line)) {
+			termlined = 1;
 			continue;
+		}
 
 		/* Check if we have terminated the connection. */
 		if (line == NULL)
 			break;
+
+		/* Check if a monstrosity of a server just sent a blank line. */
+		if ((line[0] == '\r') && (line[1] == '\n')) {
+			pd->err_count++;
+			continue;
+		}
 
 		/* Parse line item. */
 		ret = gopher_item_parse(&item, line);
@@ -531,14 +542,24 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 			char *msg;
 			log_printf(LOG_WARNING, "Failed to parse line item during "
 				"directory request: \"%s\"\n", line);
+			pd->err_count++;
 
 			msg = (char *)malloc((20 + strlen(line)) * sizeof(char));
 			sprintf(msg, "PARSING FAILED: \"%s\"", line);
 			item = gopher_item_new(GOPHER_TYPE_INTERNAL, msg);
-			free(line);
 			free(msg);
-
+			
+#ifdef DEBUG
+			free(line);
 			break;
+#endif
+		}	
+
+		/* Check if a monstrosity of a server just sent an incomplete item. */
+		if (item->addr == NULL) {
+			/* Fix this idiotic problem. */
+			item->addr = gopher_addr_new("_server.fail", 0, "INCOMPLETE_LINE");
+			pd->err_count++;
 		}
 
 		/* Push the item into the directory item stack. */
@@ -552,6 +573,12 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		/* Clean up any temporary resources. */
 		free(line);
 		line = NULL;
+	}
+	
+	/* Check if server never sent the termination dot. */
+	if (!termlined) {
+		log_printf(LOG_WARNING, "Server never sent termination dot\n");
+		pd->err_count++;
 	}
 	
 	return ret;
@@ -674,6 +701,12 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 		log_printf(LOG_ERROR, "Tried to parse the termination line\n");
 		return -1;
 	}
+	
+	/* Check if a monstrosity of a server just sent a blank line. */
+	if (line[0] == '\r') {
+		log_printf(LOG_ERROR, "Tried parsing an empty line\n");
+		return -1;
+	}
 
 	/* Initialize the item object. */
 	p = line;
@@ -696,6 +729,14 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 		gopher_item_free(it, 1);
 		it = NULL;
 		goto cleanup;
+	}
+
+	/* Check if idiotic server just sent line without the rest of the fields. */
+	if (*p == '\0') {
+		log_printf(LOG_WARNING, "Parsed incomplete line\n");
+		it->label[strlen(it->label) - 2] = '\0';
+		it->addr = NULL;
+		return errno;
 	}
 
 	/* Parse the selector. */
@@ -1105,10 +1146,18 @@ int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
 
 		/* Go through the received data looking for the end of the line. */
 		for (i = 0; i < recv_len; i++) {
-			if ((peek[i] == '\r') && ((i + 1) < recv_len) &&
-					(peek[i + 1] == '\n')) {
+			if ((peek[i] == '\n') || (peek[i] == '\r') &&
+					((i + 1) < recv_len) && (peek[i + 1] == '\n')) {
 				line_len += 2;
-				found = 1;
+				found = '\r';
+
+				/* Handle monstrosities that send LF instead of CRLF. */
+				if (peek[i] == '\n') {
+					log_printf(LOG_INFO, "Non-compliant line in peek'd buffer "
+						"\"%s\"\n", peek);
+					found = '\n';
+				}
+
 				goto concatrecv;
 			}
 
@@ -1129,8 +1178,8 @@ concatrecv:
 
 		/* Read previously peek'd data into buffer. */
 		pb = buf + prev_line_len;
-		ret = gopher_recv_raw(addr, pb, line_len - prev_line_len, &recv_len,
-			0);
+		ret = gopher_recv_raw(addr, pb, line_len - prev_line_len -
+			(found == '\n'), &recv_len, 0);
 		if (ret != 0) {
 			log_printf(LOG_ERROR, "Failed to read received line\n");
 			free(*line);
@@ -1138,7 +1187,13 @@ concatrecv:
 
 			return ret;
 		}
-		pb[recv_len] = '\0';
+		buf[line_len] = '\0';
+		
+		/* Ensure we convert a non-compliant server into a compliant one. */
+		if (found == '\n') {
+			buf[line_len - 2] = '\r';
+			buf[line_len - 1] = '\n';
+		}
 
 		/* Are we finished here? */
 		if (found)

@@ -99,6 +99,7 @@ typedef struct gopher_dir_s {
 	gopher_item_t *items;
 	struct gopher_dir_s *next;
 	size_t items_len;
+	uint16_t err_count;
 } gopher_dir_t;
 
 /* Gopherspace address handling. */
