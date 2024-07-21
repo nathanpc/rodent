@@ -68,7 +68,7 @@
 #endif /* _WIN32 */
 
 /* Gopher line receive buffer size. */
-#define RECV_LINE_BUF 300
+#define RECV_LINE_BUF 200
 
 /* Log levels. */
 typedef enum {
@@ -530,7 +530,7 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		if (ret != 0) {
 			char *msg;
 			log_printf(LOG_WARNING, "Failed to parse line item during "
-				"directory request");
+				"directory request: \"%s\"\n", line);
 
 			msg = (char *)malloc((20 + strlen(line)) * sizeof(char));
 			sprintf(msg, "PARSING FAILED: \"%s\"", line);
@@ -1064,66 +1064,89 @@ int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,
  * @see gopher_recv_raw
  */
 int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
-	char buf[RECV_LINE_BUF];
+	char peek[RECV_LINE_BUF];
+	char *buf;
+	size_t prev_line_len;
 	size_t line_len;
 	size_t recv_len;
 	int ret;
 	
 	/* Ensure we read an entire line. */
 	ret = 0;
+	prev_line_len = 0;
 	line_len = 0;
+	*line = NULL;
+	buf = NULL;
 	while (ret == 0) {
+		int found;
 		size_t i;
+		char *pb;
 
-		/* Peek at the incoming data. */
-		ret = gopher_recv_raw(addr, buf, RECV_LINE_BUF - 1, &recv_len,
+		/* Read incoming data. */
+		prev_line_len = line_len;
+		found = 0;
+		ret = gopher_recv_raw(addr, peek, RECV_LINE_BUF - 1, &recv_len,
 			MSG_PEEK);
 		if ((ret == 0) && (recv_len == 0)) {
 			*line = NULL;
+			free(buf);
 			return 0;
 		}
 		if ((ret != 0) || (recv_len == 0)) {
-			log_printf(LOG_ERROR, "Failed to peek at received line\n");
+			log_printf(LOG_ERROR, "Failed to read received line\n");
 			*line = NULL;
 			if (len != NULL)
 				*len = 0;
+			free(buf);
 
 			return ret;
 		}
-		buf[recv_len] = '\0';
+		peek[recv_len] = '\0';
 
 		/* Go through the received data looking for the end of the line. */
 		for (i = 0; i < recv_len; i++) {
-			if ((buf[i] == '\r') && ((i + 1) < recv_len) &&
-					(buf[i + 1] == '\n')) {
+			if ((peek[i] == '\r') && ((i + 1) < recv_len) &&
+					(peek[i + 1] == '\n')) {
 				line_len += 2;
-				ret = 1;
-				break;
+				found = 1;
+				goto concatrecv;
 			}
 
 			line_len++;
 		}
+
+concatrecv:
+		/* Reallocate the buffer. */
+		pb = buf;
+		buf = realloc(pb, (line_len + 1) * sizeof(char));
+		if (buf == NULL) {
+			log_printf(LOG_ERROR, "Failed to reallocate line buffer\n");
+			free(pb);
+			*line = NULL;
+
+			return errno;
+		}
+
+		/* Read previously peek'd data into buffer. */
+		pb = buf + prev_line_len;
+		ret = gopher_recv_raw(addr, pb, line_len - prev_line_len, &recv_len,
+			0);
+		if (ret != 0) {
+			log_printf(LOG_ERROR, "Failed to read received line\n");
+			free(*line);
+			*line = NULL;
+
+			return ret;
+		}
+		pb[recv_len] = '\0';
+
+		/* Are we finished here? */
+		if (found)
+			ret = 1;
 	}
 
-	/* Allocate memory to hold our line. */
-	*line = (char *)malloc((line_len + 1) * sizeof(char));
-	if (*line == NULL) {
-		log_errno(LOG_ERROR, "Failed to allocate memory for received line");
-		return errno;
-	}
-	
-	/* Read the line into our return buffer. */
-	ret = gopher_recv_raw(addr, (void *)*line, line_len, &recv_len, 0);
-	(*line)[line_len] = '\0';
-	if (ret != 0) {
-		log_printf(LOG_ERROR, "Failed to read received line\n");
-		free(*line);
-		*line = NULL;
-
-		return ret;
-	}
-	
-	/* Return the length of the line with the CRLF characters. */
+	/* Return the received line and length with the CRLF characters. */
+	*line = buf;
 	if (len != NULL)
 		*len = line_len;
 	
