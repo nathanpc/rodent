@@ -11,10 +11,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #ifdef _WIN32
 	#include <tchar.h>
 #else
-	#include <errno.h>
 	#include <unistd.h>
 #endif /* _WIN32 */
 
@@ -57,6 +57,11 @@
 		typedef LONG_PTR ssize_t;
 	#endif /* _WIN32 */
 #endif /* ssize_t */
+
+/* Ensure we have snprintf on Windows. */
+#ifndef snprintf
+	#define snprintf _snprintf
+#endif /* snprintf */
 
 #ifdef _WIN32
 /* FormatMessage default flags. */
@@ -1481,8 +1486,7 @@ char *win_wcstombs(const wchar_t *wstr) {
 		return NULL;
 
 	/* Perform the conversion. */
-	nLen = WideCharToMultiByte(cap_utf8() ? CP_UTF8 : CP_OEMCP, 0, wstr, -1,
-							   str, nLen, NULL, NULL);
+	nLen = WideCharToMultiByte(CP_OEMCP, 0, wstr, -1, str, nLen, NULL, NULL);
 	if (nLen == 0) {
 failure:
 		MessageBox(NULL, _T("Failed to convert UTF-16 string to UTF-8."),

@@ -12,12 +12,17 @@
 #include <stdlib.h>
 #ifdef _WIN32
 	#include <winsock2.h>
+	#include <ws2tcpip.h>
 #else
 	#include <sys/socket.h>
 #endif /* _WIN32 */
 
 /* Version information. */
-#define LIBGOPHER_VER_STR "0.1"
+#ifdef _WIN32
+	#define LIBGOPHER_VER_STR _T("0.1")
+#else
+	#define LIBGOPHER_VER_STR "0.1"
+#endif /* _WIN32 */
 #define LIBGOPHER_VER_MAJOR 0
 #define LIBGOPHER_VER_MINOR 1
 
