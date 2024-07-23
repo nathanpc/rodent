@@ -96,9 +96,6 @@ void log_sockerrno(log_level_t level, const char *msg, int err);
 
 /* Private utility methods. */
 const char *strdupsep(char **buf, const char *str, char sep);
-#ifdef _WIN32
-char *win_wcstombs(const wchar_t *wstr);
-#endif /* _WIN32 */
 
 /* Private methods. */
 int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
@@ -1496,5 +1493,59 @@ failure:
 	}
 
 	return str;
+}
+
+/**
+ * Converts a UTF-8 multibyte string into an UTF-16 wide-character string.
+ * @warning This function allocates memory that must be free'd by you!
+ *
+ * @param str UTF-8 string to be converted.
+ *
+ * @return UTF-16 wide-character converted string or NULL if an error occurred.
+ */
+wchar_t *win_mbstowcs(const char *str) {
+	wchar_t *wstr;
+
+#ifdef _WIN32
+	int nLen;
+
+	/* Get required buffer size and allocate some memory for it. */
+	wstr = NULL;
+	nLen = MultiByteToWideChar(CP_OEMCP, 0, str, -1, NULL, 0);
+	if (nLen == 0)
+		goto failure;
+	wstr = (wchar_t *)malloc(nLen * sizeof(wchar_t));
+	if (wstr == NULL)
+		return NULL;
+
+	/* Perform the conversion. */
+	nLen = MultiByteToWideChar(CP_OEMCP, 0, str, -1, wstr, nLen);
+	if (nLen == 0) {
+failure:
+		MessageBox(NULL, _T("Failed to convert UTF-8 string to UTF-16."),
+			_T("String Conversion Failure"), MB_ICONERROR | MB_OK);
+		if (wstr)
+			free(wstr);
+
+		return NULL;
+	}
+#else
+	size_t len;
+
+	/* Allocate some memory for our converted string. */
+	len = mbstowcs(NULL, str, 0) + 1;
+	wstr = (wchar_t *)malloc(len * sizeof(wchar_t));
+	if (wstr == NULL)
+		return NULL;
+
+	/* Perform the string conversion. */
+	len = mbstowcs(wstr, str, len);
+	if (len == (size_t)-1) {
+		free(wstr);
+		return NULL;
+	}
+#endif /* _WIN32 */
+
+	return wstr;
 }
 #endif /* _WIN32 */

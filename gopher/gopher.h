@@ -143,6 +143,12 @@ void gopher_addr_print(const gopher_addr_t *addr);
 void gopher_item_print_type(const gopher_item_t *item);
 void gopher_item_print(const gopher_item_t *item);
 
+#ifdef _WIN32
+/* Easily convert to and from Unicode to multi-byte strings under Windows. */
+char *win_wcstombs(const wchar_t *wstr);
+wchar_t *win_mbstowcs(const char *str);
+#endif /* _WIN32 */
+
 
 #ifdef __cplusplus
 }
