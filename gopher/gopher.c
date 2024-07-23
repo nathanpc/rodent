@@ -600,20 +600,24 @@ void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
 	if (dir == NULL)
 		return;
 
+	/* Ensure we remove ourselves from other objects in the stack. */
+	if (inclusive) {
+		if (dir->next)
+			dir->next->prev = NULL;
+		if (dir->prev)
+			dir->prev->next = NULL;
+	}
+
 	/* Free history backwards. */
 	if (dir->prev && (recurse | RECURSE_BACKWARD)) {
 		gopher_dir_free(dir->prev, RECURSE_BACKWARD, 1);
 		dir->prev = NULL;
-		if (inclusive && dir->next)
-			dir->next->prev = NULL;
 	}
 
 	/* Free history forwards. */
 	if (dir->next && (recurse | RECURSE_FORWARD)) {
 		gopher_dir_free(dir->next, RECURSE_FORWARD, 1);
 		dir->next = NULL;
-		if (inclusive && dir->prev)
-			dir->prev->next = NULL;
 	}
 
 	/* Free ourselves too. */
@@ -1251,8 +1255,8 @@ int sockaddrstr(char **buf, const struct sockaddr *sock_addr) {
 	switch (sock_addr->sa_family) {
 		case AF_INET:
 #ifdef _WIN32
-			WSAAddressToString(sock_addr, sizeof(struct sockaddr_in), NULL,
-							   tmp, &dwLen);
+			WSAAddressToString((LPSOCKADDR)sock_addr,
+				sizeof(struct sockaddr_in), NULL, tmp, &dwLen);
 #else
 			inet_ntop(AF_INET,
 					  &(((const struct sockaddr_in *)sock_addr)->sin_addr),
@@ -1261,8 +1265,8 @@ int sockaddrstr(char **buf, const struct sockaddr *sock_addr) {
 			break;
 		case AF_INET6:
 #ifdef _WIN32
-			WSAAddressToString(sock_addr, sizeof(struct sockaddr_in6), NULL,
-							   tmp, &dwLen);
+			WSAAddressToString((LPSOCKADDR)sock_addr,
+				sizeof(struct sockaddr_in6), NULL, tmp, &dwLen);
 #else
 			inet_ntop(AF_INET6,
 					  &(((const struct sockaddr_in6 *)sock_addr)->sin6_addr),
@@ -1284,7 +1288,7 @@ int sockaddrstr(char **buf, const struct sockaddr *sock_addr) {
 	}
 
 	/* Convert our string to UTF-8 assigning it to the return value. */
-	*buf = utf16_wcstombs(tmp);
+	*buf = win_wcstombs(tmp);
 #else
 	/* Allocate space for our return string. */
 	*buf = (char *)malloc((strlen(tmp) + 1) * sizeof(char));
