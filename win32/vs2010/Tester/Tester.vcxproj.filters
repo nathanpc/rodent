@@ -30,6 +30,9 @@
     <ClInclude Include="..\..\..\gopher\gopher.h">
       <Filter>Gopher</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\GopherWrapper.h">
+      <Filter>Gopher</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\Tester.cpp">
@@ -39,6 +42,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\gopher\gopher.c">
+      <Filter>Gopher</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GopherWrapper.cpp">
       <Filter>Gopher</Filter>
     </ClCompile>
   </ItemGroup>

@@ -6,6 +6,11 @@
  */
 
 #include "stdafx.h"
+#ifdef DEBUG
+#include <crtdbg.h>
+#endif // DEBUG
+
+#include "GopherWrapper.h"
 
 /**
  * Application's main entry point.
@@ -15,99 +20,89 @@
  *
  * @return Return code.
  */
-int _tmain(int argc, TCHAR* argv[])
-{
-	gopher_addr_t *addr;
-	gopher_item_t *item;
-	gopher_dir_t *dir;
-	int ret;
+int _tmain(int argc, TCHAR* argv[]) {
+#ifdef DEBUG
+	// Initialize memory leak detection.
+	_CrtMemState snapBegin;
+	_CrtMemState snapEnd;
+	_CrtMemState snapDiff;
+	_CrtMemCheckpoint(&snapBegin);
+#endif // DEBUG
 
-#ifdef _WIN32
-	WORD wVersionRequested;
+	Gopher::Address *addr = nullptr;
 	WSADATA wsaData;
+	int ret = 0;
 
-	// Initialize the Winsock stuff.
-	wVersionRequested = MAKEWORD(2, 2);
+	// Initialize Winsock stuff.
+	WORD wVersionRequested = MAKEWORD(2, 2);
 	if ((ret = WSAStartup(wVersionRequested, &wsaData)) != 0) {
-		printf("WSAStartup failed with error %d\n", ret);
+		tcout << _T("WSAStartup failed with error ") << ret << _T('\r') <<
+			std::endl;
 		return 1;
 	}
-#endif /* _WIN32 */
 
-	// Initialize the core.
-	_tprintf(_T("libgopher v") LIBGOPHER_VER_STR _T(" tester\r\n"));
-	item = NULL;
-	dir = NULL;
+	tcout << _T("libgopher v") << LIBGOPHER_VER_STR << _T(" tester") <<
+		_T('\r') << std::endl;
+	try {
+		// Use default address if none were supplied.
+		if (argc < 2) {
+			tcout << _T("No address was supplied, using floodgap's for ")
+				_T("testing.") << _T('\r') << std::endl;
+			addr = new Gopher::Address(_T("gopher://gopher.floodgap.com/1/overbite"));
+		} else {
+			// Parse Gopher URI from argument.
+			addr = new Gopher::Address(argv[1]);
+		}
+	
+		// Print information about the requested address.
+		tcout << _T("Requesting ");
+		gopher_addr_print(addr->c_addr());
+	
+		// Connect to the server and request directory.
+		addr->connect();
+		Gopher::Directory dir(addr);
+	
+		// Print out every item from the directory.
+		if (dir.items_count() > 0) {
+			for (size_t i = 0; i < dir.items_count(); i++)
+				gopher_item_print(dir.items()->at(i).c_item());
+		} else {
+			tcout << _T("Empty directory.") << _T('\r') << std::endl;
+		}
+	
+		// Shame non-compliant servers.
+		if (dir.error_count() > 0) {
+			tcout << dir.error_count() << _T(" errors encountered while ")
+				_T("parsing the server's output") << _T('\r') << std::endl;
+		}
 
-	// Use default address if none were supplied.
-	if (argc < 2) {
-		_tprintf(_T("No address was supplied, using floodgap's for testing.\r\n"));
-		addr = gopher_addr_new("gopher.floodgap.com", 70, "/overbite");
-	} else {
-		// Parse Gopher URI from argument.
-		//addr = gopher_addr_parse(argv[1]);
-	}
-	
-	// Ensure we got a gopherspace address.
-	if (addr == NULL) {
-		_tprintf(_T("Failed to get gopherspace address\r\n"));
-		return 1;
-	}
-	
-	// Print information about the requested address.
-	_tprintf(_T("Requesting "));
-	gopher_addr_print(addr);
-	
-	// Connect to the server.
-	ret = gopher_connect(addr);
-	if (ret != 0) {
-		perror("Failed to connect");
-		goto cleanup;
-	}
-	
-	// Get directory from address.
-	ret = gopher_dir_request(addr, &dir);
-	if (ret != 0) {
-		perror("Failed to request directory");
-		goto cleanup;
-	}
-	
-	// Print out every item from the directory.
-	if (dir->items_len > 0) {
-		item = dir->items;
-		do {
-			gopher_item_print(item);
-			item = item->next;
-		} while (item != NULL);
-	} else {
-		_tprintf(_T("Empty directory.\r\n"));
-	}
-	
-	// Shame non-compliant servers.
-	if (dir->err_count > 0) {
-		_tprintf(_T("%u errors encountered while parsing the server's output\r\n"),
-			dir->err_count);
+		// Gracefully disconnect from the server and free resources.
+		dir.free((gopher_recurse_dir_t)(RECURSE_BACKWARD | RECURSE_FORWARD));
+	} catch (const std::exception& e) {
+		std::cout << e.what() << std::endl;
+		ret = 1;
 	}
 
-	// Gracefully disconnect from the server.
-	ret = gopher_disconnect(addr);
-	if (ret != 0)
-		perror("Failed to disconnect");
-
-cleanup:	
-	// Free up any resources and return.
-	if (dir == NULL) {
-		gopher_addr_free(addr);
-	} else {
-		gopher_dir_free(dir, (gopher_recurse_dir_t)(RECURSE_FORWARD |
-			RECURSE_BACKWARD), 1);
-	}
-
-#ifdef _WIN32
-	// Clean up the Winsock stuff.
+	// Free up any resources.
+	delete addr;
 	WSACleanup();
-	system("pause");
-#endif /* _WIN32 */
 
-	return 0;
+#ifdef DEBUG
+	// Detect memory leaks.
+	_CrtMemCheckpoint(&snapEnd);
+	if (_CrtMemDifference(&snapDiff, &snapBegin, &snapEnd)) {
+		OutputDebugString(_T("MEMORY LEAKS DETECTED\r\n"));
+		OutputDebugString(L"----------- _CrtMemDumpStatistics ---------\r\n");
+		_CrtMemDumpStatistics(&snapDiff);
+		OutputDebugString(L"----------- _CrtMemDumpAllObjectsSince ---------\r\n");
+		_CrtMemDumpAllObjectsSince(&snapBegin);
+		OutputDebugString(L"----------- _CrtDumpMemoryLeaks ---------\r\n");
+		_CrtDumpMemoryLeaks();
+	} else {
+		OutputDebugString(_T("No memory leaks detected. Congratulations!\r\n"));
+	}
+#endif // DEBUG
+	system("pause");
+
+	return ret;
 }

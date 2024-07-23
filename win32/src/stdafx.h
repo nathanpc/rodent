@@ -3,11 +3,34 @@
 // are changed infrequently
 //
 
+#ifndef _WINRODENT_STDAFX_H
+#define _WINRODENT_STDAFX_H
+
+#if _MSC_VER > 1000
 #pragma once
+#endif // _MSC_VER > 1000
 
 #include "targetver.h"
 
 #include <stdio.h>
 #include <tchar.h>
 
-#include <gopher.h>
+#include <stdexcept>
+#include <iostream>
+#include <string>
+
+// Create the equivalent of TCHAR for C++ strings.
+#ifdef UNICODE
+	#define tstring std::wstring
+#else
+	#define tstring std::string
+#endif // UNICODE
+
+// Create the equivalent of TCHAR for C++ cout.
+#ifdef UNICODE
+	#define tcout std::wcout
+#else
+	#define tcout std::cout
+#endif // UNICODE
+
+#endif // _WINRODENT_STDAFX_H
