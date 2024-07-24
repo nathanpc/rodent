@@ -1,190 +1,308 @@
-// Rodent.cpp : Defines the entry point for the application.
-//
+/**
+ * Application.cpp
+ * The Windows port of the Rodent project.
+ *
+ * @author Nathan Campos <nathan@innoveworkshop.com>
+ */
 
-#include "stdafx.h"
 #include "Rodent.h"
 
+// Common definitions.
 #define MAX_LOADSTRING 100
 
-// Global Variables:
-HINSTANCE hInst;								// current instance
-TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
-TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
+// Global variables.
+HINSTANCE hInst;
+HWND hwndMain;
+TCHAR szWindowClass[MAX_LOADSTRING];
+TCHAR szAppTitle[MAX_LOADSTRING];
 
-// Forward declarations of functions included in this code module:
-ATOM				MyRegisterClass(HINSTANCE hInstance);
-BOOL				InitInstance(HINSTANCE, int);
-LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
-
-int APIENTRY _tWinMain(HINSTANCE hInstance,
-                     HINSTANCE hPrevInstance,
-                     LPTSTR    lpCmdLine,
-                     int       nCmdShow)
-{
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-
- 	// TODO: Place code here.
+/**
+ * Application's main entry point.
+ *
+ * @param hInstance     Program instance.
+ * @param hPrevInstance Ignored: Leftover from Win16.
+ * @param lpCmdLine     String with command line text.
+ * @param nShowCmd      Initial state of the program's main window.
+ *
+ * @return wParam of the WM_QUIT message.
+ */
+int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+					  LPTSTR lpCmdLine, int nCmdShow) {
 	MSG msg;
-	HACCEL hAccelTable;
+	HACCEL hAccel;
+	int rc;
+	
+	// Ensure we specify parameters not in use.
+	UNREFERENCED_PARAMETER(hPrevInstance);
 
-	// Initialize global strings
-	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	// Load the application class and title.
 	LoadString(hInstance, IDC_RODENT, szWindowClass, MAX_LOADSTRING);
-	MyRegisterClass(hInstance);
+	LoadString(hInstance, IDS_APP_TITLE, szAppTitle, MAX_LOADSTRING);
 
-	// Perform application initialization:
-	if (!InitInstance (hInstance, nCmdShow))
-	{
-		return FALSE;
+	// Initialize the application.
+	rc = RegisterApplication(hInstance);
+	if (rc == 0) {
+		MsgBoxError(NULL, TEXT("Error Registering Class"),
+			TEXT("An error occurred while trying to register the ")
+			TEXT("application's window class."));
+		return 0;
 	}
 
-	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RODENT));
+	// Initialize this single instance.
+	hwndMain = InitializeInstance(hInstance, lpCmdLine, nCmdShow);
+	if (hwndMain == 0) {
+		MsgBoxError(NULL, TEXT("Error Initializing Instance"),
+			TEXT("An error occurred while trying to initialize the ")
+			TEXT("application's instance."));
+		return 0x10;
+	}
 
-	// Main message loop:
-	while (GetMessage(&msg, NULL, 0, 0))
-	{
-		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-		{
+	// Load accelerators.
+	hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RODENT));
+
+	// Application message loop.
+	while (GetMessage(&msg, NULL, 0, 0)) {
+		// Translate accelerators.
+		if (!TranslateAccelerator(hwndMain, hAccel, &msg)) {
+			// Translate message.
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 	}
 
-	return (int) msg.wParam;
+	// Clean up.
+	return TerminateInstance(hInstance, (int)msg.wParam);
 }
 
-
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
-//  COMMENTS:
-//
-//    This function and its usage are only necessary if you want this code
-//    to be compatible with Win32 systems prior to the 'RegisterClassEx'
-//    function that was added to Windows 95. It is important to call this function
-//    so that the application will get 'well formed' small icons associated
-//    with it.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
-{
+/**
+ * Initializes the application and registers the application class.
+ *
+ * @param hInstance Application instance.
+ *
+ * @return TRUE if the class was registered.
+ */
+ATOM RegisterApplication(HINSTANCE hInstance) {
 	WNDCLASSEX wcex;
 
-	wcex.cbSize = sizeof(WNDCLASSEX);
-
+	// Setup the application's main window class.
+	wcex.cbSize = sizeof(WNDCLASSEX); 
 	wcex.style			= CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc	= WndProc;
+	wcex.lpfnWndProc	= (WNDPROC)MainWindowProc;
 	wcex.cbClsExtra		= 0;
 	wcex.cbWndExtra		= 0;
 	wcex.hInstance		= hInstance;
-	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_RODENT));
+	wcex.hIcon			= LoadIcon(hInstance, (LPCTSTR)IDI_RODENT);
 	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_RODENT);
+	wcex.hbrBackground	= GetSysColorBrush(COLOR_WINDOW);
+	wcex.lpszMenuName	= (LPCTSTR)IDC_RODENT;
 	wcex.lpszClassName	= szWindowClass;
-	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	wcex.hIconSm		= LoadIcon(wcex.hInstance, (LPCTSTR)IDI_SMALL);
 
+	// Register the application's main window class.
 	return RegisterClassEx(&wcex);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
-   HWND hWnd;
+/**
+ * Initializes the instance and creates the window.
+ *
+ * @param hInstance Program instance.
+ * @param lpCmdLine String with command line text.
+ * @param nShowCmd  Initial state of the program's main window.
+ *
+ * @return Window handler.
+ */
+HWND InitializeInstance(HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow) {
+	HWND hWnd;
+	int iRet;
 
-   hInst = hInstance; // Store instance handle in our global variable
+	// Set the global instance variable.
+	hInst = hInstance;
 
-   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+	// Initialize Winsock stuff.
+	WSADATA wsaData;
+	WORD wVersionRequested = MAKEWORD(2, 2);
+	if ((iRet = WSAStartup(wVersionRequested, &wsaData)) != 0) {
+		tcout << _T("WSAStartup failed with error ") << iRet << _T('\r') <<
+			std::endl;
+		return NULL;
+	}
 
-   if (!hWnd)
-   {
-      return FALSE;
-   }
+	// Create the main window.
+	hWnd = CreateWindow(szWindowClass,			// Window class.
+						szAppTitle,				// Window title.
+						WS_OVERLAPPEDWINDOW,	// Style flags.
+						CW_USEDEFAULT,			// X position.
+						CW_USEDEFAULT,			// Y position.
+						600,					// Initial width,
+						400,					// Initial height.
+						NULL,					// Parent window.
+						NULL,					// Menu class. (Always NULL)
+						hInstance,				// Application instance.
+						NULL);					// Pointer to create parameters.
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
+	// Check if the window creation worked.
+	if (!IsWindow(hWnd)) {
+		MessageBox(NULL, TEXT("Window Creation Failed!"), TEXT("Error"),
+            MB_ICONEXCLAMATION | MB_OK);
+        return NULL;
+	}
 
-   return TRUE;
+#ifdef UNDERCE
+	// Set the window task switching icon.
+	HANDLE hIcon = LoadImage(hInst, MAKEINTRESOURCE(IDI_DESKTOP), IMAGE_ICON,
+		GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
+	SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+
+	// Set window taskbar icon.
+	hIcon = LoadImage(hInst, MAKEINTRESOURCE(IDI_SMALL), IMAGE_ICON,
+		GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
+	SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+#endif
+
+	// Show and update the window.
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
+
+	return hWnd;
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE:  Processes messages for the main window.
-//
-//  WM_COMMAND	- process the application menu
-//  WM_PAINT	- Paint the main window
-//  WM_DESTROY	- post a quit message and return
-//
-//
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	int wmId, wmEvent;
-	PAINTSTRUCT ps;
-	HDC hdc;
+/**
+ * Terminates the application instance.
+ *
+ * @param hInstance Application instance.
+ * @param nDefRC    Return code.
+ *
+ * @return Previous return code.
+ */
+int TerminateInstance(HINSTANCE hInstance, int nDefRC) {
+	// Clean up the Winsock stuff.
+	WSACleanup();
 
-	switch (message)
-	{
-	case WM_COMMAND:
-		wmId    = LOWORD(wParam);
-		wmEvent = HIWORD(wParam);
-		// Parse the menu selections:
-		switch (wmId)
-		{
+	return nDefRC;
+}
+
+/**
+ * Main window procedure.
+ *
+ * @param hWnd   Window handler.
+ * @param wMsg   Message type.
+ * @param wParam Message parameter.
+ * @param lParam Message parameter.
+ *
+ * @return 0 if everything worked.
+ */
+LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT wMsg, WPARAM wParam,
+								LPARAM lParam) {
+	switch (wMsg) {
+		case WM_CREATE:
+			return WndMainCreate(hWnd, wMsg, wParam, lParam);
+		case WM_COMMAND:
+			return WndMainCommand(hWnd, wMsg, wParam, lParam);
+		case WM_NOTIFY:
+			return WndMainNotify(hWnd, wMsg, wParam, lParam);
+		case WM_CLOSE:
+			return WndMainClose(hWnd, wMsg, wParam, lParam);
+		case WM_DESTROY:
+			return WndMainDestroy(hWnd, wMsg, wParam, lParam);
+	}
+
+	return DefWindowProc(hWnd, wMsg, wParam, lParam);
+}
+
+/**
+ * Process the WM_CREATE message for the window.
+ *
+ * @param hWnd   Window handler.
+ * @param wMsg   Message type.
+ * @param wParam Message parameter.
+ * @param lParam Message parameter.
+ *
+ * @return 0 if everything worked.
+ */
+LRESULT WndMainCreate(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
+	// Ensure that the common controls DLL is loaded and initialized. 
+    INITCOMMONCONTROLSEX icex;
+    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icex.dwICC  = ICC_WIN95_CLASSES;
+    InitCommonControlsEx(&icex);
+
+	// TODO: Initialize Gopher stuff here.
+
+	return 0;
+}
+
+/**
+ * Process the WM_COMMAND message for the window.
+ *
+ * @param hWnd   Window handler.
+ * @param wMsg   Message type.
+ * @param wParam Message parameter.
+ * @param lParam Message parameter.
+ *
+ * @return 0 if everything worked.
+ */
+LRESULT WndMainCommand(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
+	int wmId = LOWORD(wParam);
+	int wmEvent = HIWORD(wParam);
+
+	switch (wmId) {
 		case IDM_ABOUT:
-			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+			AboutDialog(hInst, hWnd).ShowModal();
 			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
 			break;
-		default:
-			return DefWindowProc(hWnd, message, wParam, lParam);
-		}
-		break;
-	case WM_PAINT:
-		hdc = BeginPaint(hWnd, &ps);
-		// TODO: Add any drawing code here...
-		EndPaint(hWnd, &ps);
-		break;
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	default:
-		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
-	return 0;
+
+	return DefWindowProc(hWnd, wMsg, wParam, lParam);
 }
 
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	UNREFERENCED_PARAMETER(lParam);
-	switch (message)
-	{
-	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
+/**
+ * Process the WM_NOTIFY message for the window.
+ *
+ * @param hWnd   Window handler.
+ * @param wMsg   Message type.
+ * @param wParam Message parameter.
+ * @param lParam Message parameter.
+ *
+ * @return 0 if everything worked.
+ */
+LRESULT WndMainNotify(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
+	return DefWindowProc(hWnd, wMsg, wParam, lParam);
+}
 
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-		{
-			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
+/**
+ * Process the WM_CLOSE message for the window.
+ *
+ * @param hWnd   Window handler.
+ * @param wMsg   Message type.
+ * @param wParam Message parameter.
+ * @param lParam Message parameter.
+ *
+ * @return 0 if everything worked.
+ */
+LRESULT WndMainClose(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
+	// Send window destruction message.
+	DestroyWindow(hWnd);
+
+	// Call any destructors that might be needed.
+	// TODO: Call destructors.
+
+	return DefWindowProc(hWnd, wMsg, wParam, lParam);
+}
+
+/**
+ * Process the WM_DESTROY message for the window.
+ *
+ * @param hWnd   Window handler.
+ * @param wMsg   Message type.
+ * @param wParam Message parameter.
+ * @param lParam Message parameter.
+ *
+ * @return 0 if everything worked.
+ */
+LRESULT WndMainDestroy(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
+	// Post quit message and return.
+	PostQuitMessage(0);
+	return 0;
 }

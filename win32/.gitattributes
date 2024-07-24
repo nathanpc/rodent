@@ -6,6 +6,7 @@
 *.h text eol=crlf
 *.c text eol=crlf
 *.cpp text eol=crlf
+*.rc text eol=crlf
 
 *.sln text eol=crlf
 *.vcxproj text eol=crlf

@@ -19,6 +19,12 @@
     <Filter Include="Gopher">
       <UniqueIdentifier>{6d87ad70-d290-4cea-b157-b092c782840a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{3ddaae4e-22f4-4380-9252-33edfdfe8604}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows and Dialogs">
+      <UniqueIdentifier>{2351e878-4191-4bc8-8e20-9126f998516e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="small.ico">
@@ -53,8 +59,20 @@
     <ClInclude Include="..\..\src\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Utilities\DialogWindow.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Utilities\MsgBoxes.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Utilities\WindowUtilities.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\Rodent.h">
-      <Filter>Header Files</Filter>
+      <Filter>Windows and Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\AboutDialog.h">
+      <Filter>Windows and Dialogs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -67,8 +85,20 @@
     <ClCompile Include="..\..\src\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Utilities\DialogWindow.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Utilities\MsgBoxes.c">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Utilities\WindowUtilities.c">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\Rodent.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Windows and Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\AboutDialog.cpp">
+      <Filter>Windows and Dialogs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

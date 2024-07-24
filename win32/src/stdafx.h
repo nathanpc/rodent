@@ -12,9 +12,11 @@
 
 #include "targetver.h"
 
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
+#define WIN32_LEAN_AND_MEAN  // Exclude rarely-used stuff from Windows headers.
+// Windows Header Files
 #include <windows.h>
+#include <commctrl.h>
+#include <commdlg.h>
 
 // C RunTime Header Files
 #include <stdlib.h>
@@ -41,5 +43,13 @@
 #else
 	#define tcout std::cout
 #endif // UNICODE
+
+#if _MSC_VER == 1600
+	#include "../vs2010/Rodent/resource.h"
+#endif // _MSC_VER == 1600
+
+// Utilities
+#include "Utilities/MsgBoxes.h"
+#include "Utilities/WindowUtilities.h"
 
 #endif // _WINRODENT_STDAFX_H
