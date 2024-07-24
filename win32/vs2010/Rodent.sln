@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tester", "Tester\Tester.vcxproj", "{B62F6832-0E82-4D5A-89C3-20F187D62A15}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Rodent", "Rodent\Rodent.vcxproj", "{21C6E593-B0B7-40B1-B6F2-D9B0C0E1F092}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -13,6 +15,10 @@ Global
 		{B62F6832-0E82-4D5A-89C3-20F187D62A15}.Debug|Win32.Build.0 = Debug|Win32
 		{B62F6832-0E82-4D5A-89C3-20F187D62A15}.Release|Win32.ActiveCfg = Release|Win32
 		{B62F6832-0E82-4D5A-89C3-20F187D62A15}.Release|Win32.Build.0 = Release|Win32
+		{21C6E593-B0B7-40B1-B6F2-D9B0C0E1F092}.Debug|Win32.ActiveCfg = Debug|Win32
+		{21C6E593-B0B7-40B1-B6F2-D9B0C0E1F092}.Debug|Win32.Build.0 = Debug|Win32
+		{21C6E593-B0B7-40B1-B6F2-D9B0C0E1F092}.Release|Win32.ActiveCfg = Release|Win32
+		{21C6E593-B0B7-40B1-B6F2-D9B0C0E1F092}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
