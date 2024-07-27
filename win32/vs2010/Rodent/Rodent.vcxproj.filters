@@ -25,6 +25,9 @@
     <Filter Include="Windows and Dialogs">
       <UniqueIdentifier>{2351e878-4191-4bc8-8e20-9126f998516e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\Icons">
+      <UniqueIdentifier>{dc4eff1c-98b9-4995-9a20-25c77a9d80b0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="small.ico">
@@ -41,6 +44,27 @@
     </None>
     <None Include="..\..\README.md">
       <Filter>Miscellaneous</Filter>
+    </None>
+    <None Include="manifest.xml">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\icons\arrow_left_blue.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\arrow_right_blue.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\media_play_green.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\refresh.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\stop.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\arrow_up_blue.ico">
+      <Filter>Resource Files\Icons</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -73,6 +97,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\AboutDialog.h">
       <Filter>Windows and Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\SharedResources.h">
+      <Filter>Resource Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

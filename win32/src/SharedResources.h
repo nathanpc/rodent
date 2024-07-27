@@ -1,0 +1,29 @@
+/**
+ * SharedResources.h
+ * Resource definitions that should be shared among projects.
+ *
+ * @author Nathan Campos <nathan@innoveworkshop.com>
+ */
+
+#ifndef _RODENT_SHARED_RESOURCES_H
+#define _RODENT_SHARED_RESOURCES_H
+
+#if _MSC_VER > 1000
+#pragma once
+#endif // _MSC_VER > 1000
+
+// Menus
+#define IDM_BASE                        1000
+#define IDM_BACK                        (IDM_BASE + 1)
+#define IDM_NEXT                        (IDM_BASE + 2)
+#define IDM_PARENT                      (IDM_BASE + 3)
+#define IDM_REFRESH                     (IDM_BASE + 4)
+#define IDM_STOP                        (IDM_BASE + 5)
+#define IDM_GO                          (IDM_BASE + 6)
+
+// Controls
+#define IDC_BASE                        1100
+#define IDC_TXTADDRESS                  (IDC_BASE + 1)
+#define IDC_LSTDIRECTORY                (IDC_BASE + 2)
+
+#endif // _RODENT_SHARED_RESOURCES_H

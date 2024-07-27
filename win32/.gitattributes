@@ -2,6 +2,7 @@
 .gitignore text eol=crlf
 .gitattributes text eol=crlf
 *.md text eol=crlf
+*.txt text eol=crlf
 
 *.h text eol=crlf
 *.c text eol=crlf
@@ -11,3 +12,7 @@
 *.sln text eol=crlf
 *.vcxproj text eol=crlf
 *.vcxproj.filters text eol=crlf
+
+*.ico binary
+*.bmp binary
+*.png binary

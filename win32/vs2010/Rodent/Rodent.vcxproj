@@ -39,6 +39,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <EmbedManifest>false</EmbedManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -56,6 +57,14 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ws2_32.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <InputResourceManifests>
+      </InputResourceManifests>
+    </Manifest>
+    <Manifest>
+      <EnableDPIAwareness>true</EnableDPIAwareness>
+    </Manifest>
+    <ManifestResourceCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -74,11 +83,24 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <InputResourceManifests>#1</InputResourceManifests>
+    </Manifest>
+    <Manifest>
+      <EnableDPIAwareness>true</EnableDPIAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="..\..\.gitattributes" />
     <None Include="..\..\.gitignore" />
+    <None Include="..\..\icons\arrow_left_blue.ico" />
+    <None Include="..\..\icons\arrow_right_blue.ico" />
+    <None Include="..\..\icons\arrow_up_blue.ico" />
+    <None Include="..\..\icons\media_play_green.ico" />
+    <None Include="..\..\icons\refresh.ico" />
+    <None Include="..\..\icons\stop.ico" />
     <None Include="..\..\README.md" />
+    <None Include="manifest.xml" />
     <None Include="Rodent.ico" />
     <None Include="small.ico" />
   </ItemGroup>
@@ -86,6 +108,7 @@
     <ClInclude Include="..\..\..\gopher\gopher.h" />
     <ClInclude Include="..\..\src\AboutDialog.h" />
     <ClInclude Include="..\..\src\GopherWrapper.h" />
+    <ClInclude Include="..\..\src\SharedResources.h" />
     <ClInclude Include="..\..\src\Utilities\DialogWindow.h" />
     <ClInclude Include="..\..\src\Utilities\MsgBoxes.h" />
     <ClInclude Include="..\..\src\Utilities\WindowUtilities.h" />

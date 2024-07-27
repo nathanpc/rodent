@@ -44,8 +44,10 @@
 	#define tcout std::cout
 #endif // UNICODE
 
+// Resource definitions.
+#include "SharedResources.h"
 #if _MSC_VER == 1600
-	#include "../vs2010/Rodent/resource.h"
+	#include "../vs2010/Rodent/Resource.h"
 #endif // _MSC_VER == 1600
 
 // Utilities
