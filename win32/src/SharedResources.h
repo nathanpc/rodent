@@ -23,7 +23,11 @@
 
 // Controls
 #define IDC_BASE                        1100
-#define IDC_TXTADDRESS                  (IDC_BASE + 1)
+#define IDC_CMBADDRESS                  (IDC_BASE + 1)
 #define IDC_LSTDIRECTORY                (IDC_BASE + 2)
+#define IDC_TBMAIN                      (IDC_BASE + 3)
+#define IDC_TBADDRESS                   (IDC_BASE + 4)
+#define IDC_RBMAIN                      (IDC_BASE + 5)
+#define IDC_STATUSBAR                   (IDC_BASE + 6)
 
 #endif // _RODENT_SHARED_RESOURCES_H

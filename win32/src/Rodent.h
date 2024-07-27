@@ -27,10 +27,19 @@ private:
 	HWND hwndAddressBar;
 	HWND hwndAddressCombo;
 
-	// Window controls.
+	// Other controls.
+	HWND hwndDirectory;
+	HWND hwndStatusBar;
+
+	// Window controls creation.
 	HWND CreateToolbar(LPSIZE lpSize);
 	HWND CreateAddressBar(LPSIZE lpSize);
 	HWND CreateRebar();
+	HWND CreateStatusBar();
+	HWND CreateDirectoryView();
+
+	// Sizing helpers.
+	void ResizeStatusBar(LPCRECT lprcClient);
 
 public:
 	HINSTANCE hInst;

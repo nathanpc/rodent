@@ -89,6 +89,8 @@ MainWindow::MainWindow(HINSTANCE hInstance) {
 	hwndAddressCombo = NULL;
 	hwndAddressBar = NULL;
 	hwndRebar = NULL;
+	hwndDirectory = NULL;
+	hwndStatusBar = NULL;
 }
 
 /**
@@ -116,6 +118,14 @@ MainWindow::~MainWindow() {
 		DestroyWindow(hwndToolbar);
 		hwndToolbar = NULL;
 	}
+	if (hwndDirectory) {
+		DestroyWindow(hwndDirectory);
+		hwndDirectory = NULL;
+	}
+	if (hwndStatusBar) {
+		DestroyWindow(hwndStatusBar);
+		hwndStatusBar = NULL;
+	}
 
 	// Destroy the main window.
 	DestroyWindow(this->hWnd);
@@ -135,6 +145,10 @@ BOOL MainWindow::SetupControls(HWND hWnd) {
 
 	// Add controls to the window.
 	if (CreateRebar() == NULL)
+		return FALSE;
+	if (CreateStatusBar() == NULL)
+		return FALSE;
+	if (CreateDirectoryView() == NULL)
 		return FALSE;
 
 	return TRUE;
@@ -406,47 +420,40 @@ LRESULT WndMainDestroy(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
  *
  * @param hwndParent Parent window of all controls.
  *
- * @return If the function succeeds, the return value is nonzero. 0 otherwise.
+ * @return TRUE if the function succeeds.
  */
 BOOL MainWindow::ResizeWindows(HWND hwndParent) {
+	// Get the client area of the parent window.
 	RECT rcParent;
-	RECT rcClient;
-
-	// Get the client area of the parent window and begin resize deferring.
 	GetClientRect(hwndParent, &rcParent);
-	HDWP hdwp = BeginDeferWindowPos(1);
 
-	// First, reset the status bar size.
-	//DeferWindowPos(hdwp, g_Listing.hWndStatus, NULL, 0, 0,
-	//	rcl.right - rcl.left, 20, SWP_NOZORDER | SWP_NOMOVE);
-
-	// Next, reset the toolbar size.
-	DeferWindowPos(hdwp, this->hwndRebar, NULL, 0, 0,
-		rcParent.right - rcParent.left, 20, SWP_NOZORDER | SWP_NOMOVE);
-
-	// Last, reset the list view size.
-	//DeferWindowPos(hdwp, g_Listing.hWndListView, NULL,
-	//		(rcl.right - rcl.left ) / 4, 25,
-	//		(rcl.right - rcl.left) - ((rcl.right - rcl.left)/4),
-	//		rcl.bottom - rcl.top - 42,
-	//		SWP_NOZORDER );
-
-	// Perform resizing in one go.
-	BOOL ret = EndDeferWindowPos(hdwp);
-
-	// Maximize address band in Rebar.
+	// Reset the Rebar size.
+	SetWindowPos(this->hwndRebar, NULL, 0, 0, rcParent.right - rcParent.left,
+		20, SWP_NOZORDER | SWP_NOMOVE);
 	SendMessage(this->hwndRebar, RB_MAXIMIZEBAND, (WPARAM)1, (LPARAM)0);
 
 	// Resize the controls inside the address Toolbar.
 	SIZE sizeToolbar;
-	GetClientRect(this->hwndAddressBar, &rcClient);
+	RECT rcAddressBar;
+	GetClientRect(this->hwndAddressBar, &rcAddressBar);
 	SendMessage(hwndAddressBar, TB_GETMAXSIZE, 0, (LPARAM)&sizeToolbar);
-	SetWindowPos(this->hwndAddressCombo, 0, 0, 0, rcClient.right - sizeToolbar.cx - 10,
-		0, SWP_NOZORDER | SWP_NOMOVE);
+	SetWindowPos(this->hwndAddressCombo, 0, 0, 0,
+		rcAddressBar.right - sizeToolbar.cx - 10, 0, SWP_NOZORDER | SWP_NOMOVE);
 	SendMessage(this->hwndAddressBar, TB_SETINDENT,
-		(WPARAM)(rcClient.right - sizeToolbar.cx - 5), (LPARAM)0);
+		(WPARAM)(rcAddressBar.right - sizeToolbar.cx - 5), (LPARAM)0);
 
-	return ret;
+	// Resize Status bar and directory ListView.
+	ResizeStatusBar(&rcParent);
+
+	// Resize directory ListView.
+	RECT rcRebar;
+	RECT rcStatusBar;
+	GetClientRect(this->hwndRebar, &rcRebar);
+	GetClientRect(this->hwndStatusBar, &rcStatusBar);
+	SetWindowPos(this->hwndDirectory, NULL, 0, rcRebar.bottom, rcParent.right,
+		rcParent.bottom - rcStatusBar.bottom - rcRebar.bottom, SWP_NOZORDER);
+
+	return TRUE;
 }
 
 /**
@@ -462,7 +469,8 @@ HWND MainWindow::CreateToolbar(LPSIZE lpSize) {
 	hwndToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL, 
 		WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_LIST |
 		TBSTYLE_TRANSPARENT | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | CCS_NODIVIDER |
-		CCS_NORESIZE | WS_VISIBLE, 0, 0, 0, 0, this->hWnd, NULL, hInst, NULL);
+		CCS_NORESIZE | WS_VISIBLE, 0, 0, 0, 0, this->hWnd, (HMENU)IDC_TBMAIN,
+		hInst, NULL);
 	if (hwndToolbar == NULL) {
 		MsgBoxError(NULL, _T("Error creating Toolbar"),
 			_T("An error occurred while trying to run CreateWindowEx for the ")
@@ -536,8 +544,9 @@ HWND MainWindow::CreateAddressBar(LPSIZE lpSize) {
 	const DWORD buttonStyles = BTNS_AUTOSIZE;
 	hwndAddressBar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL, 
 		WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_LIST |
-		TBSTYLE_TRANSPARENT | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | CCS_NODIVIDER |
-		CCS_NORESIZE | WS_VISIBLE, 0, 0, 0, 0, this->hWnd, NULL, hInst, NULL);
+		TBSTYLE_TRANSPARENT | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
+		CCS_NODIVIDER | CCS_NORESIZE | WS_VISIBLE, 0, 0, 0, 0, this->hWnd,
+		(HMENU)IDC_TBADDRESS, hInst, NULL);
 	if (hwndAddressBar == NULL) {
 		MsgBoxError(NULL, _T("Error creating Toolbar"),
 			_T("An error occurred while trying to run CreateWindowEx for the ")
@@ -553,7 +562,7 @@ HWND MainWindow::CreateAddressBar(LPSIZE lpSize) {
 	hwndAddressCombo = CreateWindowEx(0, WC_COMBOBOXEX, NULL,
 		WS_VISIBLE | WS_CHILD | WS_TABSTOP | WS_VSCROLL | WS_CLIPCHILDREN |
 		WS_CLIPSIBLINGS | CCS_NORESIZE | CBS_AUTOHSCROLL | CBS_DROPDOWN,
-		0, 0, 250, 0, this->hWnd, NULL, hInst, NULL);
+		0, 0, 250, 0, this->hWnd, (HMENU)IDC_CMBADDRESS, hInst, NULL);
 	if (hwndAddressCombo == NULL) {
 		MsgBoxError(NULL, _T("Error creating ComboBoxEx"),
 			_T("An error occurred while trying to run CreateWindowEx for the ")
@@ -599,7 +608,7 @@ HWND MainWindow::CreateRebar() {
 	hwndRebar = CreateWindowEx(WS_EX_TOOLWINDOW, REBARCLASSNAME, NULL,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 		RBS_VARHEIGHT | CCS_NODIVIDER | RBS_BANDBORDERS | RBS_AUTOSIZE,
-		0, 0, 0, 0, this->hWnd, NULL, hInst, NULL);
+		0, 0, 0, 0, this->hWnd, (HMENU)IDC_RBMAIN, hInst, NULL);
 	if (hwndRebar == NULL) {
 		MsgBoxError(NULL, _T("Error creating Rebar"),
 			_T("An error occurred while trying to run CreateWindowEx for the ")
@@ -639,4 +648,73 @@ HWND MainWindow::CreateRebar() {
 	SendMessage(hwndRebar, RB_INSERTBAND, (WPARAM)-1, (LPARAM)&rbBand);
 
 	return hwndRebar;
+}
+
+/**
+ * Creates the window's status bar.
+ *
+ * @return Status bar window handle.
+ */
+HWND MainWindow::CreateStatusBar() {
+	// Get parent client rectangle.
+	RECT rc;
+	GetClientRect(this->hWnd, &rc);
+
+	// Create the status bar window.
+	hwndStatusBar = CreateWindowEx(0, STATUSCLASSNAME, NULL,
+		WS_CHILD | SBARS_SIZEGRIP, 0, 0, 0, 0, this->hWnd, (HMENU)IDC_STATUSBAR,
+		this->hInst, NULL);
+	if (hwndStatusBar == NULL)
+		return NULL;
+
+	// Set the status bar parts and sizing and show it.
+	//ResizeStatusBar(&rc);
+	ShowWindow(hwndStatusBar, SW_SHOW);
+
+	return hwndStatusBar;
+}
+
+/**
+ * Resizes the status bar and ensures the aspect ratio of its parts.
+ *
+ * @param lprcClient Parent window's client area.
+ */
+void MainWindow::ResizeStatusBar(LPCRECT lprcClient) {
+	// Create status bar parts.
+	const int nParts = 2;
+	int arrParts[nParts] = {
+		(int)(lprcClient->right * 0.7), (int)(lprcClient->right * 0.3)
+	};
+
+	// Get our own size.
+	RECT rc;
+	GetClientRect(hwndStatusBar, &rc);
+
+	// Resize everything.
+	SetWindowPos(hwndStatusBar, NULL, 0, lprcClient->bottom - rc.bottom,
+		lprcClient->right, 0, SWP_NOZORDER);
+	SendMessage(hwndStatusBar, SB_SETPARTS, (WPARAM)nParts, (LPARAM)arrParts);
+}
+
+/**
+ * Creates the Gopher directory ListView window.
+ *
+ * @return ListView window handle.
+ */
+HWND MainWindow::CreateDirectoryView() {
+	// Get parent client rectangle.
+	RECT rc;
+	GetClientRect(this->hwndRebar, &rc);
+
+	// Create ListView window.
+	hwndDirectory = CreateWindow(WC_LISTVIEW, _T(""), WS_CHILD | LVS_REPORT |
+		LVS_NOSORTHEADER, 0, rc.bottom, rc.right, 200, this->hWnd,
+		(HMENU)IDC_LSTDIRECTORY, hInst, NULL);
+	if (hwndDirectory == NULL)
+		return NULL;
+
+	// Show the directory window.
+	ShowWindow(hwndDirectory, SW_SHOW);
+
+	return hwndDirectory;
 }
