@@ -6,6 +6,9 @@
  */
 
 #include "Rodent.h"
+#ifdef DEBUG
+#include <crtdbg.h>
+#endif // DEBUG
 
 // Common definitions.
 #define MAX_LOADSTRING 100
@@ -33,6 +36,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	
 	// Ensure we specify parameters not in use.
 	UNREFERENCED_PARAMETER(hPrevInstance);
+
+#ifdef DEBUG
+	// Initialize memory leak detection.
+	_CrtMemState snapBegin;
+	_CrtMemState snapEnd;
+	_CrtMemState snapDiff;
+	_CrtMemCheckpoint(&snapBegin);
+#endif // DEBUG
 
 	// Load the application class and title.
 	LoadString(hInstance, IDC_RODENT, szWindowClass, MAX_LOADSTRING);
@@ -69,8 +80,26 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		}
 	}
 
-	// Clean up.
-	return TerminateInstance(hInstance, (int)msg.wParam);
+	// Terminate instance.
+	rc = TerminateInstance(hInstance, (int)msg.wParam);
+
+#ifdef DEBUG
+	// Detect memory leaks.
+	_CrtMemCheckpoint(&snapEnd);
+	if (_CrtMemDifference(&snapDiff, &snapBegin, &snapEnd)) {
+		OutputDebugString(_T("MEMORY LEAKS DETECTED\r\n"));
+		OutputDebugString(L"----------- _CrtMemDumpStatistics ---------\r\n");
+		_CrtMemDumpStatistics(&snapDiff);
+		OutputDebugString(L"----------- _CrtMemDumpAllObjectsSince ---------\r\n");
+		_CrtMemDumpAllObjectsSince(&snapBegin);
+		OutputDebugString(L"----------- _CrtDumpMemoryLeaks ---------\r\n");
+		_CrtDumpMemoryLeaks();
+	} else {
+		OutputDebugString(_T("No memory leaks detected. Congratulations!\r\n"));
+	}
+#endif // DEBUG
+
+	return rc;
 }
 
 /**
