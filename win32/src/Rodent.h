@@ -16,6 +16,33 @@
 #include "AboutDialog.h"
 #include "GopherWrapper.h"
 
+class MainWindow {
+private:
+	// Image lists.
+	HIMAGELIST himlToolbar;
+
+	// Toolbars.
+	HWND hwndToolbar;
+	HWND hwndRebar;
+	HWND hwndAddressBar;
+	HWND hwndAddressCombo;
+
+	// Window controls.
+	HWND CreateToolbar(LPSIZE lpSize);
+	HWND CreateAddressBar(LPSIZE lpSize);
+	HWND CreateRebar();
+
+public:
+	HINSTANCE hInst;
+	HWND hWnd;
+
+	MainWindow(HINSTANCE hInstance);
+	virtual ~MainWindow();
+
+	BOOL SetupControls(HWND hWnd);
+	BOOL ResizeWindows(HWND hwndParent);
+};
+
 // Instance operators.
 ATOM RegisterApplication(HINSTANCE hInstance);
 HWND InitializeInstance(HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow);
@@ -32,10 +59,5 @@ LRESULT WndMainNotify(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
 LRESULT WndMainSize(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
 LRESULT WndMainClose(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
 LRESULT WndMainDestroy(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam);
-
-// Window controls.
-HWND CreateToolbar(HWND hwndParent, LPSIZE lpSize);
-HWND CreateAddressWindow(HWND hwndParent);
-HWND CreateRebar(HWND hwndParent);
 
 #endif // _RODENT_APP_H

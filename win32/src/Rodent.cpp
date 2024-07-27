@@ -11,8 +11,7 @@
 #define MAX_LOADSTRING 100
 
 // Global variables.
-HINSTANCE hInst;
-HWND hwndMain;
+MainWindow *wndMain = NULL;
 TCHAR szWindowClass[MAX_LOADSTRING];
 TCHAR szAppTitle[MAX_LOADSTRING];
 
@@ -49,7 +48,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	}
 
 	// Initialize this single instance.
-	hwndMain = InitializeInstance(hInstance, lpCmdLine, nCmdShow);
+	HWND hwndMain = InitializeInstance(hInstance, lpCmdLine, nCmdShow);
 	if (hwndMain == 0) {
 		MsgBoxError(NULL, _T("Error Initializing Instance"),
 			_T("An error occurred while trying to initialize the ")
@@ -72,6 +71,73 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	// Clean up.
 	return TerminateInstance(hInstance, (int)msg.wParam);
+}
+
+/**
+ * Constructs the main window object.
+ *
+ * @param hInstance Application instance.
+ */
+MainWindow::MainWindow(HINSTANCE hInstance) {
+	// Initialize important stuff.
+	this->hInst = hInstance;
+
+	// Initialize default values.
+	this->hWnd = NULL;
+	himlToolbar = NULL;
+	hwndToolbar = NULL;
+	hwndAddressCombo = NULL;
+	hwndAddressBar = NULL;
+	hwndRebar = NULL;
+}
+
+/**
+ * Cleans up everything that was allocated by the main window.
+ */
+MainWindow::~MainWindow() {
+	// Destroy everything related to the Rebar.
+	if (hwndRebar) {
+		DestroyWindow(hwndRebar);
+		hwndRebar = NULL;
+	}
+	if (hwndAddressCombo) {
+		DestroyWindow(hwndAddressCombo);
+		hwndAddressCombo = NULL;
+	}
+	if (hwndAddressBar) {
+		DestroyWindow(hwndAddressBar);
+		hwndAddressBar = NULL;
+	}
+	if (himlToolbar) {
+		ImageList_Destroy(himlToolbar);
+		himlToolbar = NULL;
+	}
+	if (hwndToolbar) {
+		DestroyWindow(hwndToolbar);
+		hwndToolbar = NULL;
+	}
+
+	// Destroy the main window.
+	DestroyWindow(this->hWnd);
+	this->hWnd = NULL;
+}
+
+/**
+ * Sets up the layout of the window's controls.
+ *
+ * @param hWnd Main window handle.
+ *
+ * @return TRUE if the operation was successful.
+ */
+BOOL MainWindow::SetupControls(HWND hWnd) {
+	// Ensure we have a copy of the window handle.
+	this->hWnd = hWnd;
+
+	// Add controls to the window.
+	if (CreateRebar() == NULL)
+		return FALSE;
+
+	return TRUE;
 }
 
 /**
@@ -115,9 +181,6 @@ HWND InitializeInstance(HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow) {
 	HWND hWnd;
 	int iRet;
 
-	// Set the global instance variable.
-	hInst = hInstance;
-
 	// Initialize Winsock stuff.
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(2, 2);
@@ -128,6 +191,9 @@ HWND InitializeInstance(HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow) {
 			_T("WSAStartup failed with an error."));
 		return NULL;
 	}
+
+	// Initialize main window object.
+	wndMain = new MainWindow(hInstance);
 
 	// Create the main window.
 	hWnd = CreateWindow(szWindowClass,			// Window class.
@@ -230,6 +296,9 @@ LRESULT WndMainCreate(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 	icex.dwICC  = ICC_WIN95_CLASSES | ICC_COOL_CLASSES | ICC_USEREX_CLASSES;
 	InitCommonControlsEx(&icex);
 
+	// Setup the window.
+	wndMain->SetupControls(hWnd);
+
 	// TODO: Initialize Gopher stuff here.
 
 	return 0;
@@ -251,7 +320,7 @@ LRESULT WndMainCommand(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 
 	switch (wmId) {
 		case IDM_ABOUT:
-			AboutDialog(hInst, hWnd).ShowModal();
+			AboutDialog(wndMain->hInst, hWnd).ShowModal();
 			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
@@ -290,6 +359,9 @@ LRESULT WndMainSize(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 	if (wParam == SIZE_MINIMIZED)
 		return DefWindowProc(hWnd, wMsg, wParam, lParam);
 
+	// Resize child windows.
+	wndMain->ResizeWindows(hWnd);
+
 	return DefWindowProc(hWnd, wMsg, wParam, lParam);
 }
 
@@ -305,7 +377,7 @@ LRESULT WndMainSize(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
  */
 LRESULT WndMainClose(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 	// Send window destruction message.
-	DestroyWindow(hWnd);
+	delete wndMain;
 
 	// Call any destructors that might be needed.
 	// TODO: Call destructors.
@@ -330,26 +402,71 @@ LRESULT WndMainDestroy(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 /**
+ * Resizes all controls based on the parent's size.
+ *
+ * @param hwndParent Parent window of all controls.
+ *
+ * @return If the function succeeds, the return value is nonzero. 0 otherwise.
+ */
+BOOL MainWindow::ResizeWindows(HWND hwndParent) {
+	RECT rcParent;
+	RECT rcClient;
+
+	// Get the client area of the parent window and begin resize deferring.
+	GetClientRect(hwndParent, &rcParent);
+	HDWP hdwp = BeginDeferWindowPos(1);
+
+	// First, reset the status bar size.
+	//DeferWindowPos(hdwp, g_Listing.hWndStatus, NULL, 0, 0,
+	//	rcl.right - rcl.left, 20, SWP_NOZORDER | SWP_NOMOVE);
+
+	// Next, reset the toolbar size.
+	DeferWindowPos(hdwp, this->hwndRebar, NULL, 0, 0,
+		rcParent.right - rcParent.left, 20, SWP_NOZORDER | SWP_NOMOVE);
+
+	// Last, reset the list view size.
+	//DeferWindowPos(hdwp, g_Listing.hWndListView, NULL,
+	//		(rcl.right - rcl.left ) / 4, 25,
+	//		(rcl.right - rcl.left) - ((rcl.right - rcl.left)/4),
+	//		rcl.bottom - rcl.top - 42,
+	//		SWP_NOZORDER );
+
+	// Perform resizing in one go.
+	BOOL ret = EndDeferWindowPos(hdwp);
+
+	// Maximize address band in Rebar.
+	SendMessage(this->hwndRebar, RB_MAXIMIZEBAND, (WPARAM)1, (LPARAM)0);
+
+	// Resize the controls inside the address Toolbar.
+	SIZE sizeToolbar;
+	GetClientRect(this->hwndAddressBar, &rcClient);
+	SendMessage(hwndAddressBar, TB_GETMAXSIZE, 0, (LPARAM)&sizeToolbar);
+	SetWindowPos(this->hwndAddressCombo, 0, 0, 0, rcClient.right - sizeToolbar.cx - 10,
+		0, SWP_NOZORDER | SWP_NOMOVE);
+	SendMessage(this->hwndAddressBar, TB_SETINDENT,
+		(WPARAM)(rcClient.right - sizeToolbar.cx - 5), (LPARAM)0);
+
+	return ret;
+}
+
+/**
  * Creates and populates the browser Toolbar with controls.
  *
- * @param hwndParent Parent window to attach the Toolbar to.
- * @param lpSize     Optional. Size of the Toolbar with all of its controls.
+ * @param lpSize Optional. Size of the Toolbar with all of its controls.
  *
  * @return Window handle for the Toolbar control.
  */
-HWND CreateToolbar(HWND hwndParent, LPSIZE lpSize) {
-	// Declare and initialize local constants.
-	const DWORD buttonStyles = BTNS_AUTOSIZE;
-
+HWND MainWindow::CreateToolbar(LPSIZE lpSize) {
 	// Create the Toolbar.
-	HWND hwndToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL, 
+	const DWORD buttonStyles = BTNS_AUTOSIZE;
+	hwndToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL, 
 		WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_LIST |
 		TBSTYLE_TRANSPARENT | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | CCS_NODIVIDER |
-		CCS_NORESIZE | WS_VISIBLE, 0, 0, 0, 0, hwndParent, NULL, hInst, NULL);
+		CCS_NORESIZE | WS_VISIBLE, 0, 0, 0, 0, this->hWnd, NULL, hInst, NULL);
 	if (hwndToolbar == NULL) {
 		MsgBoxError(NULL, _T("Error creating Toolbar"),
 			_T("An error occurred while trying to run CreateWindowEx for the ")
-			_T("Toolbar."));
+			_T("main Toolbar."));
 		return NULL;
 	}
 	SendMessage(hwndToolbar, TB_SETEXTENDEDSTYLE, (WPARAM)NULL,
@@ -397,7 +514,7 @@ HWND CreateToolbar(HWND hwndParent, LPSIZE lpSize) {
 		(LPARAM)&tbButtons);
 
 	// Resize the Toolbar, and then show it.
-	//SendMessage(hwndToolbar, TB_AUTOSIZE, 0, 0); 
+	SendMessage(hwndToolbar, TB_AUTOSIZE, 0, 0); 
 	ShowWindow(hwndToolbar,  TRUE);
 	
 	// Get the final size of the Toolbar if requested.
@@ -408,41 +525,81 @@ HWND CreateToolbar(HWND hwndParent, LPSIZE lpSize) {
 }
 
 /**
- * Creates the browser address editor window.
+ * Creates the browser address Toolbar.
  *
- * @param hwndParent Parent window to attach the Rebar to.
+ * @param lpSize Optional. Size of the Toolbar with all of its controls.
  *
- * @return Window handle for the address window control.
+ * @return Window handle for the address Toolbar control.
  */
-HWND CreateAddressWindow(HWND hwndParent) {
+HWND MainWindow::CreateAddressBar(LPSIZE lpSize) {
+	// Create address Toolbar.
+	const DWORD buttonStyles = BTNS_AUTOSIZE;
+	hwndAddressBar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL, 
+		WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS | TBSTYLE_LIST |
+		TBSTYLE_TRANSPARENT | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | CCS_NODIVIDER |
+		CCS_NORESIZE | WS_VISIBLE, 0, 0, 0, 0, this->hWnd, NULL, hInst, NULL);
+	if (hwndAddressBar == NULL) {
+		MsgBoxError(NULL, _T("Error creating Toolbar"),
+			_T("An error occurred while trying to run CreateWindowEx for the ")
+			_T("address Toolbar."));
+		return NULL;
+	}
+	SendMessage(hwndAddressBar, TB_SETEXTENDEDSTYLE, (WPARAM)NULL,
+		(LPARAM)TBSTYLE_EX_MIXEDBUTTONS);
+	SendMessage(hwndAddressBar, TB_SETIMAGELIST, (WPARAM)0,
+		(LPARAM)himlToolbar);
+
 	// Create the ComboBoxEx control.
-	HWND hwndComboBox = CreateWindowEx(0, WC_COMBOBOXEX, NULL,
+	hwndAddressCombo = CreateWindowEx(0, WC_COMBOBOXEX, NULL,
 		WS_VISIBLE | WS_CHILD | WS_TABSTOP | WS_VSCROLL | WS_CLIPCHILDREN |
 		WS_CLIPSIBLINGS | CCS_NORESIZE | CBS_AUTOHSCROLL | CBS_DROPDOWN,
-		0, 0, 0, 0, hwndParent, NULL, hInst, NULL);
-	if (hwndComboBox == NULL) {
+		0, 0, 250, 0, this->hWnd, NULL, hInst, NULL);
+	if (hwndAddressCombo == NULL) {
 		MsgBoxError(NULL, _T("Error creating ComboBoxEx"),
 			_T("An error occurred while trying to run CreateWindowEx for the ")
 			_T("address bar ComboBoxEx."));
 		return NULL;
 	}
 
-	return hwndComboBox;
+	// Append the address ComboBoxEx to the Toolbar.
+	SetParent(hwndAddressCombo, hwndAddressBar);
+
+	// Setup Toolbar buttons.
+	const int numButtons = 1;
+	int iButtonLabel = SendMessage(hwndAddressBar, TB_ADDSTRING, (WPARAM)hInst,
+		(LPARAM)IDS_TBNAVLABELS);
+	TBBUTTON tbButtons[numButtons] = {
+		{ 5, IDM_GO, TBSTATE_ENABLED, buttonStyles, {0}, NULL, 0 }
+	};
+
+	// Add buttons.
+	SendMessage(hwndAddressBar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON),
+		(LPARAM)0);
+	SendMessage(hwndAddressBar, TB_ADDBUTTONS, (WPARAM)numButtons,
+		(LPARAM)&tbButtons);
+
+	// Resize the Toolbar, and then show it.
+	SendMessage(hwndAddressBar, TB_AUTOSIZE, 0, 0); 
+	ShowWindow(hwndAddressBar,  TRUE);
+	
+	// Get the final size of the Toolbar if requested.
+	if (lpSize != NULL)
+		SendMessage(hwndAddressBar, TB_GETMAXSIZE, 0, (LPARAM)lpSize);
+
+	return hwndAddressBar;
 }
 
 /**
  * Creates and populates the browser Rebar with controls.
  *
- * @param hwndParent Parent window to attach the Rebar to.
- *
  * @return Window handle for the Rebar control.
  */
-HWND CreateRebar(HWND hwndParent) {
+HWND MainWindow::CreateRebar() {
 	// Create Rebar control.
-	HWND hwndRebar = CreateWindowEx(WS_EX_TOOLWINDOW, REBARCLASSNAME, NULL,
+	hwndRebar = CreateWindowEx(WS_EX_TOOLWINDOW, REBARCLASSNAME, NULL,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		RBS_VARHEIGHT | CCS_NODIVIDER | RBS_BANDBORDERS, 0, 0, 0, 0,
-		hwndParent, NULL, hInst, NULL);
+		RBS_VARHEIGHT | CCS_NODIVIDER | RBS_BANDBORDERS | RBS_AUTOSIZE,
+		0, 0, 0, 0, this->hWnd, NULL, hInst, NULL);
 	if (hwndRebar == NULL) {
 		MsgBoxError(NULL, _T("Error creating Rebar"),
 			_T("An error occurred while trying to run CreateWindowEx for the ")
@@ -454,17 +611,16 @@ HWND CreateRebar(HWND hwndParent) {
 	REBARBANDINFO rbBand = { sizeof(REBARBANDINFO) };
 	rbBand.fMask = RBBIM_STYLE | RBBIM_TEXT | RBBIM_CHILD | RBBIM_CHILDSIZE |
 		RBBIM_SIZE;
-	rbBand.fStyle = RBBS_CHILDEDGE | RBBS_GRIPPERALWAYS;
+	rbBand.fStyle = RBBS_CHILDEDGE;
 
 	// Create main Toolbar and get its size.
 	SIZE sizeToolbar;
-	HWND hwndToolbar = CreateToolbar(hwndParent, &sizeToolbar);
-	if (hwndToolbar == NULL)
+	if (CreateToolbar(&sizeToolbar) == NULL)
 		return NULL;
 
 	// Setup and add the Toolbar to the Rebar control.
 	rbBand.lpText = _T("");
-	rbBand.hwndChild = hwndToolbar;
+	rbBand.hwndChild = this->hwndToolbar;
 	rbBand.cyChild = sizeToolbar.cy;
 	rbBand.cxMinChild = sizeToolbar.cx;
 	rbBand.cyMinChild = sizeToolbar.cy;
@@ -472,14 +628,13 @@ HWND CreateRebar(HWND hwndParent) {
 	SendMessage(hwndRebar, RB_INSERTBAND, (WPARAM)-1, (LPARAM)&rbBand);
 
 	// Create address bar.
-	HWND hwndAddress = CreateAddressWindow(hwndParent);
-	if (hwndAddress == NULL)
+	if (CreateAddressBar(NULL) == NULL)
 		return NULL;
 
 	// Setup and add the address bar to the Rebar control.
 	rbBand.lpText = _T("Address ");
-	rbBand.hwndChild = hwndAddress;
-	rbBand.cxMinChild = 350;
+	rbBand.hwndChild = this->hwndAddressBar;
+	rbBand.cxMinChild = 250;
 	rbBand.cx = 0;
 	SendMessage(hwndRebar, RB_INSERTBAND, (WPARAM)-1, (LPARAM)&rbBand);
 
