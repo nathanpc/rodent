@@ -447,6 +447,15 @@ void Directory::free(gopher_recurse_dir_t recurse) {
 }
 
 /**
+ * Frees the internal structure help by this object.
+ *
+ * @param recurse_flags Bitwise field to recursively free its history stack.
+ */
+void Directory::free(int recurse_flags) {
+	this->free(static_cast<gopher_recurse_dir_t>(recurse_flags));
+}
+
+/**
  * Gets the number of items inside this directory.
  *
  * @return Number of items inside this directory.

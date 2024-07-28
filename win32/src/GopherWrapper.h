@@ -87,6 +87,7 @@ public:
 	Directory(gopher_dir_t *dir);
 	virtual ~Directory();
 	void free(gopher_recurse_dir_t recurse);
+	void free(int recurse_flags);
 
 	Directory prev() const;
 	Directory next() const;

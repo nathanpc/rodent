@@ -77,7 +77,7 @@ int _tmain(int argc, TCHAR* argv[]) {
 		}
 
 		// Gracefully disconnect from the server and free resources.
-		dir.free((gopher_recurse_dir_t)(RECURSE_BACKWARD | RECURSE_FORWARD));
+		dir.free(RECURSE_BACKWARD | RECURSE_FORWARD);
 	} catch (const std::exception& e) {
 		std::cout << e.what() << std::endl;
 		ret = 1;
