@@ -13,44 +13,6 @@
 #endif // _MSC_VER > 1000
 
 #include "stdafx.h"
-#include "AboutDialog.h"
-#include "GopherWrapper.h"
-
-class MainWindow {
-private:
-	// Image lists.
-	HIMAGELIST himlToolbar;
-
-	// Toolbars.
-	HWND hwndToolbar;
-	HWND hwndRebar;
-	HWND hwndAddressBar;
-	HWND hwndAddressCombo;
-
-	// Other controls.
-	HWND hwndDirectory;
-	HWND hwndStatusBar;
-
-	// Window controls creation.
-	HWND CreateToolbar(LPSIZE lpSize);
-	HWND CreateAddressBar(LPSIZE lpSize);
-	HWND CreateRebar();
-	HWND CreateStatusBar();
-	HWND CreateDirectoryView();
-
-	// Sizing helpers.
-	void ResizeStatusBar(LPCRECT lprcClient);
-
-public:
-	HINSTANCE hInst;
-	HWND hWnd;
-
-	MainWindow(HINSTANCE hInstance);
-	virtual ~MainWindow();
-
-	BOOL SetupControls(HWND hWnd);
-	BOOL ResizeWindows(HWND hwndParent);
-};
 
 // Instance operators.
 ATOM RegisterApplication(HINSTANCE hInstance);

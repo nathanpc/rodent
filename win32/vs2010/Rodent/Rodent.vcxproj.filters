@@ -92,14 +92,17 @@
     <ClInclude Include="..\..\src\Utilities\WindowUtilities.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Rodent.h">
-      <Filter>Windows and Dialogs</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\AboutDialog.h">
       <Filter>Windows and Dialogs</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\SharedResources.h">
       <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Rodent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\MainWindow.h">
+      <Filter>Windows and Dialogs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -121,10 +124,13 @@
     <ClCompile Include="..\..\src\Utilities\WindowUtilities.c">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Rodent.cpp">
+    <ClCompile Include="..\..\src\AboutDialog.cpp">
       <Filter>Windows and Dialogs</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\AboutDialog.cpp">
+    <ClCompile Include="..\..\src\Rodent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MainWindow.cpp">
       <Filter>Windows and Dialogs</Filter>
     </ClCompile>
   </ItemGroup>

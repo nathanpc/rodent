@@ -108,6 +108,7 @@
     <ClInclude Include="..\..\..\gopher\gopher.h" />
     <ClInclude Include="..\..\src\AboutDialog.h" />
     <ClInclude Include="..\..\src\GopherWrapper.h" />
+    <ClInclude Include="..\..\src\MainWindow.h" />
     <ClInclude Include="..\..\src\SharedResources.h" />
     <ClInclude Include="..\..\src\Utilities\DialogWindow.h" />
     <ClInclude Include="..\..\src\Utilities\MsgBoxes.h" />
@@ -121,6 +122,7 @@
     <ClCompile Include="..\..\..\gopher\gopher.c" />
     <ClCompile Include="..\..\src\AboutDialog.cpp" />
     <ClCompile Include="..\..\src\GopherWrapper.cpp" />
+    <ClCompile Include="..\..\src\MainWindow.cpp" />
     <ClCompile Include="..\..\src\Rodent.cpp" />
     <ClCompile Include="..\..\src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
