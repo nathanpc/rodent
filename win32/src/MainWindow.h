@@ -17,10 +17,15 @@
 
 class MainWindow {
 private:
+	// Gopher stuff.
+	Gopher::Directory *goInitialDirectory;
+	Gopher::Directory *goDirectory;
+	tstring strInitialURL;
+
 	// Image lists.
 	HIMAGELIST himlToolbar;
 
-	// Toolbars.
+	// Toolbars and toolbar controls.
 	HWND hwndToolbar;
 	HWND hwndRebar;
 	HWND hwndAddressBar;
@@ -40,18 +45,25 @@ private:
 	// Sizing helpers.
 	void ResizeStatusBar(LPCRECT lprcClient);
 
+	// Control helpers.
+	void AddDirectoryEntry(size_t nIndex);
+
 public:
 	// Global handles.
 	HINSTANCE hInst;
 	HWND hWnd;
 
 	// Constructors and destructors.
-	MainWindow(HINSTANCE hInstance);
+	MainWindow(HINSTANCE hInstance, LPCTSTR szURI);
 	virtual ~MainWindow();
 
 	// Controls setup.
 	BOOL SetupControls(HWND hWnd);
 	BOOL ResizeWindows(HWND hwndParent);
+	void DirectoryListViewNotify(NMLVDISPINFO *lpVDI);
+
+	// Browser navigation.
+	void BrowseTo(LPCTSTR szURL);
 };
 
 #endif // _RODENT_MAINWINDOW_H

@@ -11,12 +11,16 @@
  * Constructs the main window object.
  *
  * @param hInstance Application instance.
+ * @param szURI     Optional. Initial URI to load on open.
  */
-MainWindow::MainWindow(HINSTANCE hInstance) {
+MainWindow::MainWindow(HINSTANCE hInstance, LPCTSTR szURI) {
 	// Initialize important stuff.
 	this->hInst = hInstance;
+	strInitialURL = (szURI) ? szURI : _T("gopher://gopher.floodgap.com/1/overbite");
 
 	// Initialize default values.
+	goInitialDirectory = nullptr;
+	goDirectory = nullptr;
 	this->hWnd = NULL;
 	himlToolbar = NULL;
 	hwndToolbar = NULL;
@@ -52,10 +56,14 @@ MainWindow::~MainWindow() {
 		DestroyWindow(hwndToolbar);
 		hwndToolbar = NULL;
 	}
+
+	// Destroy everything related to the directory ListView.
 	if (hwndDirectory) {
 		DestroyWindow(hwndDirectory);
 		hwndDirectory = NULL;
 	}
+
+	// Destroy status bar.
 	if (hwndStatusBar) {
 		DestroyWindow(hwndStatusBar);
 		hwndStatusBar = NULL;
@@ -64,6 +72,91 @@ MainWindow::~MainWindow() {
 	// Destroy the main window.
 	DestroyWindow(this->hWnd);
 	this->hWnd = NULL;
+
+	// Free up any resources allocated by the Gopher client implementation.
+	if (goInitialDirectory) {
+		goInitialDirectory->free(RECURSE_BACKWARD | RECURSE_FORWARD);
+		delete goInitialDirectory;
+		goInitialDirectory = nullptr;
+		goDirectory = nullptr;
+	}
+}
+
+/**
+ * Navigates the browser to a specific gopherspace URL.
+ *
+ * @param szURL Gopherspace URL to navigate to.
+ */
+void MainWindow::BrowseTo(LPCTSTR szURL) {
+	try {
+		// Get gopherspace address structure from URL.
+		gopher_addr_t *addr = Gopher::Address::from_url(szURL);
+
+		// TODO: Reset the address bar contents with parsed address.
+
+		if (goInitialDirectory != nullptr) {
+			// TODO: Get directory from requested address.
+		} else {
+			// Ensure we have an initial directory to start off.
+			goInitialDirectory = new Gopher::Directory(addr);
+			goDirectory = goInitialDirectory;
+		}
+	} catch (const std::exception& e) {
+#ifdef UNICODE
+		// Convert the Unicode string to multi-byte.
+		TCHAR *szMessage = win_mbstowcs(e.what());
+		if (szMessage == NULL)
+			throw std::exception("Failed to convert exception to wide string");
+#else
+		const char *szMessage = e.what();
+#endif // UNICODE
+
+		MsgBoxError(this->hWnd, _T("Failed to browse to URL"), szMessage);
+
+#ifdef UNICODE
+		// Free the temporary buffer.
+		std::free(szMessage);
+#endif // UNICODE
+
+		return;
+	}
+
+	// Populate the directory list view.
+	ListView_DeleteAllItems(hwndDirectory);
+	if (goDirectory->items_count() > 0) {
+		for (size_t i = 0; i < goDirectory->items_count(); i++)
+			AddDirectoryEntry(i);
+	} else {
+		MsgBoxInfo(this->hWnd, _T("Empty directory"),
+			_T("This page was intentionally left blank."));
+	}
+}
+
+/**
+ * Appends a directory entry item to the ListView.
+ *
+ * @param nIndex Index of the item in the directory object.
+ */
+void MainWindow::AddDirectoryEntry(size_t nIndex) {
+	Gopher::Item item = goDirectory->items()->at(nIndex);
+	LVITEM lvi;
+
+	// Populate ListView item structure.
+	lvi.mask = LVIF_TEXT | LVIF_PARAM | LVIF_STATE;
+	lvi.state = 0; 
+	lvi.stateMask = 0; 
+   	lvi.iItem = nIndex;
+	//lvi.iImage = index;
+	lvi.iSubItem = 0;
+	lvi.lParam = (LPARAM)&goDirectory->items()->at(nIndex);
+	lvi.pszText = item.label();
+
+	// Insert the item into the ListView.
+	if (ListView_InsertItem(hwndDirectory, &lvi) == -1) {
+		MsgBoxError(this->hWnd, _T("List view error"),
+			_T("An error occurred while trying to add an entry to the ")
+			_T("browser's ListView."));
+	}
 }
 
 /**
@@ -74,6 +167,12 @@ MainWindow::~MainWindow() {
  * @return TRUE if the operation was successful.
  */
 BOOL MainWindow::SetupControls(HWND hWnd) {
+	// Ensure that the common controls DLL is loaded and initialized. 
+	INITCOMMONCONTROLSEX icex;
+	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	icex.dwICC  = ICC_WIN95_CLASSES | ICC_COOL_CLASSES | ICC_USEREX_CLASSES;
+	InitCommonControlsEx(&icex);
+
 	// Ensure we have a copy of the window handle.
 	this->hWnd = hWnd;
 
@@ -84,6 +183,9 @@ BOOL MainWindow::SetupControls(HWND hWnd) {
 		return FALSE;
 	if (CreateDirectoryView() == NULL)
 		return FALSE;
+
+	// Go to the initial gopherhole.
+	BrowseTo(strInitialURL.c_str());
 
 	return TRUE;
 }

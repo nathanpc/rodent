@@ -29,7 +29,6 @@ int _tmain(int argc, TCHAR* argv[]) {
 	_CrtMemCheckpoint(&snapBegin);
 #endif // DEBUG
 
-	Gopher::Address *addr = nullptr;
 	WSADATA wsaData;
 	int ret = 0;
 
@@ -44,23 +43,25 @@ int _tmain(int argc, TCHAR* argv[]) {
 	tcout << _T("libgopher v") << LIBGOPHER_VER_STR << _T(" tester") <<
 		_T('\r') << std::endl;
 	try {
+		tstring addr;
+
 		// Use default address if none were supplied.
 		if (argc < 2) {
 			tcout << _T("No address was supplied, using floodgap's for ")
 				_T("testing.") << _T('\r') << std::endl;
-			addr = new Gopher::Address(_T("gopher://gopher.floodgap.com/1/overbite"));
+			addr = _T("gopher://gopher.floodgap.com/1/overbite");
 		} else {
 			// Parse Gopher URI from argument.
-			addr = new Gopher::Address(argv[1]);
+			addr = argv[1];
 		}
 	
 		// Print information about the requested address.
+		gopher_addr_t *goaddr = Gopher::Address::from_url(addr);
 		tcout << _T("Requesting ");
-		gopher_addr_print(addr->c_addr());
+		gopher_addr_print(goaddr);
 	
 		// Connect to the server and request directory.
-		addr->connect();
-		Gopher::Directory dir(addr);
+		Gopher::Directory dir(goaddr);
 	
 		// Print out every item from the directory.
 		if (dir.items_count() > 0) {
@@ -75,16 +76,12 @@ int _tmain(int argc, TCHAR* argv[]) {
 			tcout << dir.error_count() << _T(" errors encountered while ")
 				_T("parsing the server's output") << _T('\r') << std::endl;
 		}
-
-		// Gracefully disconnect from the server and free resources.
-		dir.free(RECURSE_BACKWARD | RECURSE_FORWARD);
 	} catch (const std::exception& e) {
 		std::cout << e.what() << std::endl;
 		ret = 1;
 	}
 
 	// Free up any resources.
-	delete addr;
 	WSACleanup();
 
 #ifdef DEBUG

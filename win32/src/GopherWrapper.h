@@ -35,6 +35,9 @@ public:
 	Address(const gopher_addr_t *addr);
 	Address(tstring uri);
 	virtual ~Address();
+	
+	static gopher_addr_t *from_url(const TCHAR *url);
+	static gopher_addr_t *from_url(tstring url);
 
 	void connect();
 	void disconnect();
@@ -54,7 +57,7 @@ public:
 class Item {
 private:
 	const gopher_item_t *m_item;
-	tstring *m_label;
+	TCHAR *m_label;
 
 	bool label_replicated() const;
 
@@ -66,7 +69,7 @@ public:
 	void notify(bool force);
 
 	gopher_type_t type() const;
-	const TCHAR *label();
+	TCHAR *label();
 	const gopher_item_t *c_item() const;
 };
 
@@ -78,14 +81,17 @@ private:
 	gopher_dir_t *m_dir;
 	std::vector<Item> *m_items;
 	Address *m_addr;
+	bool m_bOwner;
 
-	void init(gopher_dir_t *dir, Address *addr);
+	void init(gopher_dir_t *dir, Address *addr, bool owner);
 	void replicate_items();
 
 public:
+	Directory::Directory(gopher_addr_t *goaddr);
 	Directory(Address *addr);
 	Directory(gopher_dir_t *dir);
 	virtual ~Directory();
+
 	void free(gopher_recurse_dir_t recurse);
 	void free(int recurse_flags);
 

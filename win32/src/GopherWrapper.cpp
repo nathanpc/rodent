@@ -88,6 +88,57 @@ void Address::init(gopher_addr_t *addr, bool readOnly) {
 }
 
 /**
+ * Creates a gopherspace address structure from an URL.
+ *
+ * @warning This method dinamically allocates memory.
+ *
+ * @param url Gopherspace URL string.
+ *
+ * @return Gopherspace address structure allocated based on the provided URL.
+ *
+ * @see gopher_addr_free
+ */
+gopher_addr_t *Address::from_url(const TCHAR *url) {
+#ifdef UNICODE
+	// Convert the Unicode string to multi-byte.
+	char *szURL = win_wcstombs(url);
+	if (szURL == NULL)
+		throw std::exception("Failed to convert URL to multi-byte string");
+#else
+	const char *szURL = url;
+#endif // UNICODE
+
+	// Try to parse the supplied URL.
+	gopher_addr_t *addr = gopher_addr_parse(szURL);
+	if (addr == nullptr) {
+		throw std::exception("Failed to parse URL into gopherspace address "
+			"object");
+	}
+
+#ifdef UNICODE
+	// Free the temporary buffer.
+	std::free(szURL);
+#endif // UNICODE
+
+	return addr;
+}
+
+/**
+ * Creates a gopherspace address structure from an URL.
+ *
+ * @warning This method dinamically allocates memory.
+ *
+ * @param url Gopherspace URL string.
+ *
+ * @return Gopherspace address structure allocated based on the provided URL.
+ *
+ * @see gopher_addr_free
+ */
+gopher_addr_t *Address::from_url(tstring url) {
+	return from_url(url.c_str());
+}
+
+/**
  * Establishes a connection with a Gopher server.
  */
 void Address::connect() {
@@ -218,7 +269,7 @@ Item::Item(const gopher_item_t *item) {
  */
 Item::~Item() {
 	if (this->label_replicated()) {
-		delete this->m_label;
+		free(this->m_label);
 		this->m_item = NULL;
 	}
 }
@@ -230,18 +281,14 @@ Item::~Item() {
  */
 void Item::notify(bool force) {
 	if (force || this->label_replicated()) {
-		TCHAR *label;
-
 		// Check if this isn't an invalid item.
 		if (this->m_item == nullptr)
 			throw std::exception("Using blank Item objects is prohibted");
 
 #ifdef UNICODE
-		label = win_mbstowcs(this->m_item->label);
-		this->m_label->assign(label);
-		free(label);
+		this->m_label = win_mbstowcs(this->m_item->label);
 #else
-		this->m_label->assign(this->m_item->label);
+		this->m_label = this->m_item->label;
 #endif // UNICODE
 	}
 }
@@ -260,11 +307,11 @@ gopher_type_t Item::type() const {
  *
  * @return Label of the referenced item.
  */
-const TCHAR *Item::label() {
+TCHAR *Item::label() {
 	if (!this->label_replicated())
 		this->notify(true);
 
-	return this->m_label->c_str();
+	return this->m_label;
 }
 
 /**
@@ -294,10 +341,57 @@ bool Item::label_replicated() const {
  */
 
 /**
+ * Creates a Gopher directory object and requests the directory from the Gopher
+ * server. This object will manage all the dynamically allocated memory, when
+ * out of scope we'll clean everything up.
+ *
+ * @param goaddr Gopherspace address structure. (Fully managed by us, including
+ *               freeing when needed.)
+ */
+Directory::Directory(gopher_addr_t *goaddr) {
+	gopher_dir_t *dir = NULL;
+	int ret;
+
+	// Connect to the server.
+	ret = gopher_connect(goaddr);
+	if (ret != 0) {
+		// Build up the exception message.
+		std::string msg("Failed to connect to server: ");
+		msg += strerror(ret);
+
+		// Free the address structure and throw the exception.
+		gopher_addr_free(goaddr);
+		throw std::exception(msg.c_str());
+	}
+
+	// Get directory from address.
+	ret = gopher_dir_request(goaddr, &dir);
+	if (ret != 0) {
+		// Build up the exception message.
+		std::string msg("Failed to request directory: ");
+		msg += strerror(ret);
+
+		// Free the address structure and throw the exception.
+		gopher_addr_free(goaddr);
+		throw std::exception(msg.c_str());
+	}
+
+	// Gracefully disconnect from the server.
+	ret = gopher_disconnect(goaddr);
+	if (ret != 0)
+		perror("Failed to disconnect");
+
+	// Finally initialize the object.
+	this->init(dir, nullptr, true);
+}
+
+/**
  * Requests a directory from the Gopher server.
  *
  * @warning This object won't free the internal directory structure when it goes
- *          out of scope.
+ *          out of scope. Call Directory::free for that.
+ *
+ * @param addr Gopherspace address object. (Won't be free'd by us)
  *
  * @see Directory::free
  */
@@ -321,37 +415,51 @@ Directory::Directory(Address *addr) {
 	}
 
 	// Finally initialize the object.
-	this->init(dir, addr);
+	this->init(dir, addr, false);
 }
 
 /**
  * Creates a Gopher directory acessor object.
  *
  * @warning This object won't free the internal directory structure when it goes
- *          out of scope.
+ *          out of scope. Call Directory::free for that.
  *
  * @param dir Internal Gopher directory structure.
  *
  * @see Directory::free
  */
 Directory::Directory(gopher_dir_t *dir) {
-	this->init(dir, nullptr);
+	this->init(dir, nullptr, false);
 }
 
 /**
- * Deallocates and cleans up internal objects.
+ * Deallocates and cleans up internal objects. If we are the owner of the
+ * internal structures it'll also free recursively forward other directories.
+ *
+ * @see Directory::free
  */
 Directory::~Directory() {
-	if (this->m_items != nullptr) {
+	if (this->m_bOwner) {
+		this->free(RECURSE_FORWARD);
+	} else if (this->m_items != nullptr) {
 		delete this->m_items;
 		this->m_items = nullptr;
 	}
 }
 
-void Directory::init(gopher_dir_t *dir, Address *addr) {
+/**
+ * Initializes the values of the object.
+ *
+ * @param dir   Gopher directory structure.
+ * @param addr  Gopherspace address structure.
+ * @param owner Are we the sole owners of all structures? Are we the ones that
+ *              should free them completely?
+ */
+void Directory::init(gopher_dir_t *dir, Address *addr, bool owner) {
 	this->m_dir = dir;
 	this->m_items = nullptr;
 	this->m_addr = addr;
+	this->m_bOwner = owner;
 }
 
 /**
@@ -431,18 +539,28 @@ const std::vector<Item> *Directory::items() {
  */
 void Directory::free(gopher_recurse_dir_t recurse) {
 	// Free underlying structure.
-	gopher_dir_free(this->m_dir, recurse, 1);
-	this->m_dir = NULL;
+	if (this->m_dir != nullptr) {
+		gopher_dir_free(this->m_dir, recurse, 1);
+		this->m_dir = nullptr;
+	}
 
 	// Free cached items.
-	delete this->m_items;
-	this->m_items = nullptr;
+	if (this->m_items != nullptr) {
+		delete this->m_items;
+		this->m_items = nullptr;
+	}
 
 	// Check if we need to propagate this to relying address object.
 	if (this->m_addr != nullptr) {
 		// Needed since gopher_dir_free() frees the socket.
 		m_addr->invalidate();
 		m_addr->disconnect();
+
+		// Should we also free the address?
+		if (this->m_bOwner) {
+			delete m_addr;
+			m_addr = nullptr;
+		}
 	}
 }
 

@@ -6,6 +6,8 @@
  */
 
 #include "Rodent.h"
+
+#include <ShellAPI.h>
 #ifdef DEBUG
 #include <crtdbg.h>
 #endif // DEBUG
@@ -158,7 +160,15 @@ HWND InitializeInstance(HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow) {
 	}
 
 	// Initialize main window object.
-	wndMain = new MainWindow(hInstance);
+	int numArgs = 0;
+	LPTSTR *lpArgs = CommandLineToArgvW(lpCmdLine, &numArgs);
+	LPCTSTR szAddress = NULL;
+	if (numArgs > 1)
+		szAddress = lpArgs[1];
+	wndMain = new MainWindow(hInstance, szAddress);
+	LocalFree(lpArgs);
+	lpArgs = NULL;
+	szAddress = NULL;
 
 	// Create the main window.
 	hWnd = CreateWindow(szWindowClass,			// Window class.
@@ -255,17 +265,8 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT wMsg, WPARAM wParam,
  * @return 0 if everything worked.
  */
 LRESULT WndMainCreate(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
-	// Ensure that the common controls DLL is loaded and initialized. 
-	INITCOMMONCONTROLSEX icex;
-	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-	icex.dwICC  = ICC_WIN95_CLASSES | ICC_COOL_CLASSES | ICC_USEREX_CLASSES;
-	InitCommonControlsEx(&icex);
-
 	// Setup the window.
 	wndMain->SetupControls(hWnd);
-
-	// TODO: Initialize Gopher stuff here.
-
 	return 0;
 }
 
@@ -306,6 +307,13 @@ LRESULT WndMainCommand(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
  * @return 0 if everything worked.
  */
 LRESULT WndMainNotify(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
+	switch (((LPNMHDR)lParam)->code) {
+	case LVN_GETDISPINFO:
+		// Handle ListView text setting callback.
+		wndMain->DirectoryListViewNotify((NMLVDISPINFO *)lParam);
+		return 0;
+	}
+
 	return DefWindowProc(hWnd, wMsg, wParam, lParam);
 }
 
