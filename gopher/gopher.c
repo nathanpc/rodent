@@ -793,7 +793,7 @@ cleanup:
 	if (port)
 		free(port);
 	
-	return errno;
+	return 0;
 }
 
 /**
@@ -1378,6 +1378,10 @@ void log_sockerrno(log_level_t level, const char *msg, int err) {
  */
 void log_printf(log_level_t level, const char *format, ...) {
 	va_list args;
+#ifdef _WIN32
+	char szmbMsg[255];
+	TCHAR *szMsg;
+#endif /* _WIN32 */
 
 	/* Print the log level tag. */
 	switch (level) {
@@ -1400,7 +1404,15 @@ void log_printf(log_level_t level, const char *format, ...) {
 
 	/* Print the actual message. */
 	va_start(args, format);
+#ifndef _WIN32
 	vfprintf(stderr, format, args);
+#else
+	vsnprintf(szmbMsg, 254, format, args);
+	szmbMsg[254] = '\0';
+	szMsg = win_mbstowcs(szmbMsg);
+	OutputDebugString(szMsg);
+	free(szMsg);
+#endif /* !_WIN32 */
 	va_end(args);
 }
 
