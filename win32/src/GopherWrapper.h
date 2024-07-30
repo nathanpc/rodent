@@ -25,6 +25,7 @@ namespace Gopher {
 class Address {
 private:
 	gopher_addr_t *m_addr;
+	gopher_type_t m_cType;
 	bool m_bReadOnly;
 	bool m_bConnected;
 
@@ -36,8 +37,10 @@ public:
 	Address(tstring uri);
 	virtual ~Address();
 	
-	static gopher_addr_t *from_url(const TCHAR *url);
-	static gopher_addr_t *from_url(tstring url);
+	static gopher_addr_t *from_url(const TCHAR *url, gopher_type_t *type);
+	static gopher_addr_t *from_url(tstring url, gopher_type_t *type);
+	static TCHAR *as_url(const gopher_addr_t *addr, gopher_type_t type);
+	TCHAR *to_url() const;
 
 	void connect();
 	void disconnect();
@@ -65,6 +68,8 @@ public:
 	Item();
 	Item(const gopher_item_t *item);
 	virtual ~Item();
+
+	TCHAR *to_url() const;
 
 	void notify(bool force);
 

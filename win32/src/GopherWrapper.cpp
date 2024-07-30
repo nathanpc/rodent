@@ -24,6 +24,7 @@ using namespace Gopher;
  * @param readOnly The object DOES NOT own its internal structure?
  */
 Address::Address(gopher_addr_t *addr, bool readOnly) {
+	this->m_cType = GOPHER_TYPE_UNKNOWN;
 	this->init(addr, readOnly);
 }
 
@@ -33,6 +34,7 @@ Address::Address(gopher_addr_t *addr, bool readOnly) {
  * @param addr Internal gopherspace address structure.
  */
 Address::Address(const gopher_addr_t *addr) {
+	this->m_cType = GOPHER_TYPE_UNKNOWN;
 	this->init(const_cast<gopher_addr_t *>(addr), true);
 }
 
@@ -42,25 +44,7 @@ Address::Address(const gopher_addr_t *addr) {
  * @param uri Universal Resource Identifier of the gopherspace.
  */
 Address::Address(tstring uri) {
-#ifdef UNICODE
-	// Convert the Unicode string to multi-byte.
-	char *szURI = win_wcstombs(uri.c_str());
-	if (szURI == NULL)
-		throw std::exception("Failed to convert URI to multi-byte string");
-#else
-	const char *szURI = uri.c_str();
-#endif // UNICODE
-
-	// Try to parse the supplied URI.
-	this->init(gopher_addr_parse(szURI), false);
-	if (this->m_addr == nullptr) {
-		throw std::exception("Failed to parse URI into gopherspace address "
-			"object");
-	}
-
-#ifdef UNICODE
-	std::free(szURI);
-#endif // UNICODE
+	this->init(Address::from_url(uri, &this->m_cType), false);
 }
 
 /**
@@ -78,7 +62,7 @@ Address::~Address() {
  * Initializes the object. Used to bypass the limitation of calling constructors
  * from another constructor in older C++ editions.
  *
- * @param addr Internal gopherspace address structure.
+ * @param addr     Internal gopherspace address structure.
  * @param readOnly The object DOES NOT own its internal structure?
  */
 void Address::init(gopher_addr_t *addr, bool readOnly) {
@@ -92,13 +76,14 @@ void Address::init(gopher_addr_t *addr, bool readOnly) {
  *
  * @warning This method dinamically allocates memory.
  *
- * @param url Gopherspace URL string.
+ * @param url  Gopherspace URL string.
+ * @param type Optional. Stores the parsed Gopher entry item type character.
  *
  * @return Gopherspace address structure allocated based on the provided URL.
  *
  * @see gopher_addr_free
  */
-gopher_addr_t *Address::from_url(const TCHAR *url) {
+gopher_addr_t *Address::from_url(const TCHAR *url, gopher_type_t *type) {
 #ifdef UNICODE
 	// Convert the Unicode string to multi-byte.
 	char *szURL = win_wcstombs(url);
@@ -109,7 +94,7 @@ gopher_addr_t *Address::from_url(const TCHAR *url) {
 #endif // UNICODE
 
 	// Try to parse the supplied URL.
-	gopher_addr_t *addr = gopher_addr_parse(szURL);
+	gopher_addr_t *addr = gopher_addr_parse(szURL, type);
 	if (addr == nullptr) {
 		throw std::exception("Failed to parse URL into gopherspace address "
 			"object");
@@ -128,14 +113,48 @@ gopher_addr_t *Address::from_url(const TCHAR *url) {
  *
  * @warning This method dinamically allocates memory.
  *
- * @param url Gopherspace URL string.
+ * @param url  Gopherspace URL string.
+ * @param type Optional. Stores the parsed Gopher entry item type character.
  *
  * @return Gopherspace address structure allocated based on the provided URL.
  *
  * @see gopher_addr_free
  */
-gopher_addr_t *Address::from_url(tstring url) {
-	return from_url(url.c_str());
+gopher_addr_t *Address::from_url(tstring url, gopher_type_t *type) {
+	return from_url(url.c_str(), type);
+}
+
+/**
+ * Converts an addres structure into a string URL representation of it.
+ *
+ * @warning This method dinamically allocates memory.
+ *
+ * @param addr Gopherspace address structure.
+ * @param type Gopher entry item type character.
+ *
+ * @return URL string representing the address structure.
+ */
+TCHAR *Address::as_url(const gopher_addr_t *addr, gopher_type_t type) {
+#ifdef UNICODE
+	char *mb = gopher_addr_str(addr, type);
+	TCHAR *uni = win_mbstowcs(mb);
+	::free(mb);
+
+	return uni;
+#else
+	return gopher_addr_str(addr, type);
+#endif // UNICODE
+}
+
+/**
+ * Converts an addres object into a string URL representation of it.
+ *
+ * @warning This method dinamically allocates memory.
+ *
+ * @return URL string representing the address object.
+ */
+TCHAR *Address::to_url() const {
+	return Address::as_url(this->m_addr, this->m_cType);
 }
 
 /**
@@ -272,6 +291,17 @@ Item::~Item() {
 		free(this->m_label);
 		this->m_item = NULL;
 	}
+}
+
+/**
+ * Converts an item address into a string URL representation of it.
+ *
+ * @warning This method dinamically allocates memory.
+ *
+ * @return URL string representing the address of the item.
+ */
+TCHAR *Item::to_url() const {
+	return Address::as_url(this->m_item->addr, this->m_item->type);
 }
 
 /**

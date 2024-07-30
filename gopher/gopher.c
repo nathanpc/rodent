@@ -95,6 +95,7 @@ void log_sockerrno(log_level_t level, const char *msg, int err);
 #endif /* DEBUG */
 
 /* Private utility methods. */
+char *strcatp(char *dest, const char *src);
 const char *strdupsep(char **buf, const char *str, char sep);
 
 /* Private methods. */
@@ -153,7 +154,9 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  *
  * @warning This function dinamically allocates memory.
  *
- * @param uri Universal Resource Identifier of the gopherspace.
+ * @param uri  Universal Resource Identifier of the gopherspace.
+ * @param type Optional. Stores the parsed type. If URI didn't contain one a
+ *             NUL terminator will be returned.
  *
  * @return Newly parsed gopherspace address object or NULL if a parsing error
  *         occurred. Check errno case of failure.
@@ -161,7 +164,7 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  * @see gopher_addr_new
  * @see gopher_addr_free
  */
-gopher_addr_t *gopher_addr_parse(const char *uri) {
+gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
 	gopher_addr_t *addr;
 	const char *p;
 	const char *pend;
@@ -211,10 +214,12 @@ gopher_addr_t *gopher_addr_parse(const char *uri) {
 		free(port);
 	}
 	
-	/* Jump type identifier. */
+	/* Get type identifier. */
 	p = pend + 1;
 	if (*p == '\0')
 		return addr;
+	if (type)
+		*type = (gopher_type_t)*p;
 	p++;
 	
 	/* Get the selector. */
@@ -256,11 +261,72 @@ int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
 }
 
 /**
+ * Converts a gopherspace address object into an URL string.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param addr Gopherspace address object.
+ * @param type Entry type character. Use NUL terminator if should be omitted.
+ *
+ * @return URL string representation of the gopherspace address object.
+ *
+ * @see gopher_addr_print
+ */
+char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
+	char port[6];
+	char *url;
+	char *buf;
+	size_t len;
+
+	/* Do we even have anything to do here? */
+	if (addr == NULL)
+		return NULL;
+
+	/* Convert port number to string. */
+	itoa(addr->port, port, 10);
+
+	/* Estimate the length of the string needed to store the URL. */
+	len = 9 + 1;  /* gopher:// + NUL */
+	len += strlen(addr->host) + 1;
+	len += strlen(port) + 1;
+	if ((type != GOPHER_TYPE_UNKNOWN) && (type != GOPHER_TYPE_INTERNAL))
+		len += 1;
+	if (addr->selector)
+		len += strlen(addr->selector) + 1;
+
+	/* Allocate memory for the URL. */
+	url = (char *)malloc(len * sizeof(char));
+	if (url == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate memory for gopherspace "
+			"address URL string");
+		return NULL;
+	}
+
+	/* Ensure we have a type in the URL always. As specified in RFC 4266 */
+	if ((type == GOPHER_TYPE_UNKNOWN) || (type == GOPHER_TYPE_INTERNAL))
+		type = GOPHER_TYPE_DIR;
+
+	/* Build up the URL. */
+	buf = strcatp(url, "gopher://");
+	buf = strcatp(buf, addr->host);
+	*buf++ = ':';
+	buf = strcatp(buf, port);
+	*buf++ = '/';
+	*buf++ = (char)type;
+	if (addr->selector)
+		buf = strcatp(buf, addr->selector);
+
+	return url;
+}
+
+/**
  * Prints out the gopherspace address object internals for debugging.
  *
  * @param addr Gopherspace address object.
  */
 void gopher_addr_print(const gopher_addr_t *addr) {
+	char *url;
+
 	/* Is this a valid object? */
 	if (addr == NULL) {
 		printf("(null)\n");
@@ -268,7 +334,9 @@ void gopher_addr_print(const gopher_addr_t *addr) {
 	}
 	
 	/* Print out the object data. */
-	printf("%s [%u] %s\n", addr->host, addr->port, addr->selector);
+	url = gopher_addr_str(addr, GOPHER_TYPE_UNKNOWN);
+	printf("%s\n", url);
+	free(url);
 }
 
 /**
@@ -676,6 +744,22 @@ gopher_item_t *gopher_item_new(gopher_type_t type, const char *label) {
 }
 
 /**
+ * Gets the URL which points to a respective item object.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param item Gopher item object.
+ *
+ * @return Standardized URL representation of the item's location.
+ *
+ * @see gopher_addr_str
+ * @see gopher_item_print
+ */
+char *gopher_item_url(const gopher_item_t *item) {
+	return gopher_addr_str(item->addr, item->type);
+}
+
+/**
  * Parses a line received from a server into an item object.
  *
  * @warning This function dinamically allocates memory.
@@ -798,8 +882,6 @@ cleanup:
 
 /**
  * Prints debugging information about a Gopher item type.
- *
- * @warning This function is not thread-safe!
  *
  * @param item Gopher item to have its type printed out.
  */
@@ -1425,6 +1507,34 @@ void log_printf(log_level_t level, const char *format, ...) {
  * |                                                                           |
  * +===========================================================================+
  */
+
+/**
+ * Appends a string to another and returns a pointer to the NUL termination
+ * character of the destination string.
+ *
+ * @warning This function has the same safety issues as strcat.
+ *
+ * @param dest String to be appended to. Ensure it can hold the new value.
+ * @param src  String to be appended to the destination.
+ *
+ * @return Pointer to the termination character of the new concatenated string.
+ *
+ * @see strcat
+ */
+char *strcatp(char *dest, const char *src) {
+	const char *s;
+	char *p;
+
+	/* Copy the string over. */
+	s = src;
+	p = dest;
+	do {
+		*p++ = *s++;
+	} while (*s != '\0');
+	*p = '\0';
+
+	return p;
+}
 
 /**
  * Duplicates a string until a separator or termination character.

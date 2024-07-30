@@ -44,6 +44,7 @@ typedef enum {
  * Gopher data types.
  */
 typedef enum {
+	GOPHER_TYPE_UNKNOWN  = '\0',
 	GOPHER_TYPE_INTERNAL = '\0',
 	GOPHER_TYPE_TEXT   = '0',
 	GOPHER_TYPE_DIR    = '1',
@@ -110,7 +111,8 @@ typedef struct gopher_dir_s {
 /* Gopherspace address handling. */
 gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 							   const char *selector);
-gopher_addr_t *gopher_addr_parse(const char *uri);
+gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type);
+char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type);
 void gopher_addr_print(const gopher_addr_t *addr);
 void gopher_addr_free(gopher_addr_t *addr);
 
@@ -127,6 +129,7 @@ void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
 int gopher_item_parse(gopher_item_t **item, const char *line);
 void gopher_item_free(gopher_item_t *item, gopher_recurse_dir_t recurse);
 int gopher_is_termline(const char *line);
+char *gopher_item_url(const gopher_item_t *item);
 
 /* Networking operations. */
 int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
