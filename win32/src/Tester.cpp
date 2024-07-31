@@ -56,7 +56,7 @@ int _tmain(int argc, TCHAR* argv[]) {
 		}
 	
 		// Print information about the requested address.
-		gopher_addr_t *goaddr = Gopher::Address::from_url(addr);
+		gopher_addr_t *goaddr = Gopher::Address::from_url(addr, NULL);
 		tcout << _T("Requesting ");
 		gopher_addr_print(goaddr);
 	
