@@ -307,11 +307,16 @@ LRESULT WndMainCommand(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
  * @return 0 if everything worked.
  */
 LRESULT WndMainNotify(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
-	switch (((LPNMHDR)lParam)->code) {
-	case LVN_GETDISPINFO:
-		// Handle ListView text setting callback.
-		wndMain->DirectoryListViewNotify((NMLVDISPINFO *)lParam);
-		return 0;
+	LPNMHDR nmh = (LPNMHDR)lParam;
+	switch (nmh->code) {
+	case LVN_HOTTRACK:
+		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
+			return wndMain->HandleItemHotTrack((LPNMLISTVIEW)lParam);
+		break;
+	case NM_HOVER:
+		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
+			return wndMain->HandleItemHover(nmh);
+		break;
 	}
 
 	return DefWindowProc(hWnd, wMsg, wParam, lParam);

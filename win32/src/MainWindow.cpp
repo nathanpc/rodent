@@ -88,11 +88,12 @@ MainWindow::~MainWindow() {
  * @param szURL Gopherspace URL to navigate to.
  */
 void MainWindow::BrowseTo(LPCTSTR szURL) {
+	gopher_type_t type = GOPHER_TYPE_UNKNOWN;
+	gopher_addr_t *addr = NULL;
+
 	try {
 		// Get gopherspace address structure from URL.
-		gopher_addr_t *addr = Gopher::Address::from_url(szURL);
-
-		// TODO: Reset the address bar contents with parsed address.
+		addr = Gopher::Address::from_url(szURL, &type);
 
 		if (goInitialDirectory != nullptr) {
 			// TODO: Get directory from requested address.
@@ -121,6 +122,21 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 		return;
 	}
 
+	// Reset the address bar contents with parsed address.
+	TCHAR *szNewURL = Gopher::Address::as_url(addr, type);
+	SetWindowText(hwndAddressCombo, szNewURL);
+	free(szNewURL);
+
+	// Shame non-compliant servers.
+	if (goDirectory->error_count() > 0) {
+		tstring strMsg;
+		strMsg += goDirectory->error_count();
+		strMsg += _T(" warnings");
+		SetStatusMessage(strMsg.c_str());
+	} else {
+		SetStatusMessage(_T("OK"));
+	}
+
 	// Populate the directory list view.
 	ListView_DeleteAllItems(hwndDirectory);
 	if (goDirectory->items_count() > 0) {
@@ -130,6 +146,7 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 		MsgBoxInfo(this->hWnd, _T("Empty directory"),
 			_T("This page was intentionally left blank."));
 	}
+	ListView_SetColumnWidth(hwndDirectory, 0, LVSCW_AUTOSIZE);
 }
 
 /**
@@ -157,6 +174,74 @@ void MainWindow::AddDirectoryEntry(size_t nIndex) {
 			_T("An error occurred while trying to add an entry to the ")
 			_T("browser's ListView."));
 	}
+}
+
+/**
+ * Sets the text of the address part of the status bar.
+ *
+ * @param szAddress Address to be displayed in the status bar.
+ */
+void MainWindow::SetStatusAddress(LPCTSTR szAddress) {
+	SendMessage(hwndStatusBar, SB_SETTEXT, (WPARAM)0, (LPARAM)szAddress);
+}
+
+/**
+ * Sets the text of the message part of the status bar.
+ *
+ * @param szMsg Message to be displayed in the status bar.
+ */
+void MainWindow::SetStatusMessage(LPCTSTR szMsg) {
+	SendMessage(hwndStatusBar, SB_SETTEXT, (WPARAM)1, (LPARAM)szMsg);
+}
+
+/**
+ * Handles the actions to take place when the user hovers over an item in the
+ * directory ListView.
+ *
+ * @param nmh Information about the NM_HOVER notification.
+ *
+ * @return 0 to allow the message to be propagated further.
+ */
+LRESULT MainWindow::HandleItemHover(LPNMHDR nmh) {
+	// Get hovered item.
+	int nIndex = ListView_GetHotItem(hwndDirectory);
+	if (nIndex < 0)
+		return 1;
+	Gopher::Item item = goDirectory->items()->at(nIndex);
+
+	// Put address of hovered item in status bar.
+	LPTSTR szAddress = item.to_url();
+	SetStatusAddress(szAddress);
+	free(szAddress);
+	szAddress = NULL;
+
+	// Don't select the item automatically.
+	return 1;
+}
+
+/**
+ * Handles the actions to take place when the user hovers over an item in the
+ * directory ListView.
+ *
+ * @param nmlv Information about the LVN_HOTTRACK notification.
+ *
+ * @return 0 to allow the message to be propagated further.
+ */
+LRESULT MainWindow::HandleItemHotTrack(LPNMLISTVIEW nmlv) {
+	// Ensure the index is valid.
+	if (nmlv->iItem < 0)
+		return 1;
+
+	// Get hovered item.
+	Gopher::Item item = goDirectory->items()->at(nmlv->iItem);
+
+	// Ignore information items.
+	if (item.type() == GOPHER_TYPE_INFO) {
+		SetStatusAddress(_T(""));
+		nmlv->iItem = -1;
+	}
+
+	return 0;
 }
 
 /**
@@ -458,7 +543,8 @@ void MainWindow::ResizeStatusBar(LPCRECT lprcClient) {
 	// Create status bar parts.
 	const int nParts = 2;
 	int arrParts[nParts] = {
-		(int)(lprcClient->right * 0.7), (int)(lprcClient->right * 0.3)
+		(int)(lprcClient->right * 0.7),
+		-1
 	};
 
 	// Get our own size.
@@ -489,6 +575,13 @@ HWND MainWindow::CreateDirectoryView() {
 		(HMENU)IDC_LSTDIRECTORY, hInst, NULL);
 	if (hwndDirectory == NULL)
 		return NULL;
+	ListView_SetExtendedListViewStyle(hwndDirectory, LVS_EX_FULLROWSELECT |
+		LVS_EX_TRACKSELECT | LVS_EX_ONECLICKACTIVATE | LVS_EX_UNDERLINEHOT);
+	ListView_SetHoverTime(hwndDirectory, 100);
+
+	// Ensure we use a monospace font for that nice ASCII art.
+	HFONT hFont = (HFONT)GetStockObject(ANSI_FIXED_FONT);
+	SendMessage(hwndDirectory, WM_SETFONT, (WPARAM)hFont, (LPARAM)NULL);
 
 	// Setup common column properties.
 	int iCol = 0;
@@ -506,4 +599,15 @@ HWND MainWindow::CreateDirectoryView() {
 	ShowWindow(hwndDirectory, SW_SHOW);
 
 	return hwndDirectory;
+}
+
+/**
+ * Checks if a window handle is for the directory list view.
+ *
+ * @param hWnd Window handle to be tested.
+ *
+ * @return TRUE if the window handle is in fact of the directory list view.
+ */
+BOOL MainWindow::IsDirectoryListView(HWND hWnd) const {
+	return this->hwndDirectory == hWnd;
 }

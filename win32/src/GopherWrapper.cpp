@@ -139,6 +139,7 @@ TCHAR *Address::as_url(const gopher_addr_t *addr, gopher_type_t type) {
 	char *mb = gopher_addr_str(addr, type);
 	TCHAR *uni = win_mbstowcs(mb);
 	::free(mb);
+	mb = NULL;
 
 	return uni;
 #else

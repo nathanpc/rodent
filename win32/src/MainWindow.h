@@ -47,6 +47,8 @@ private:
 
 	// Control helpers.
 	void AddDirectoryEntry(size_t nIndex);
+	void SetStatusAddress(LPCTSTR szAddress);
+	void SetStatusMessage(LPCTSTR szMsg);
 
 public:
 	// Global handles.
@@ -60,10 +62,16 @@ public:
 	// Controls setup.
 	BOOL SetupControls(HWND hWnd);
 	BOOL ResizeWindows(HWND hwndParent);
-	void DirectoryListViewNotify(NMLVDISPINFO *lpVDI);
 
 	// Browser navigation.
 	void BrowseTo(LPCTSTR szURL);
+
+	// Notification handling.
+	LRESULT HandleItemHover(LPNMHDR nmh);
+	LRESULT HandleItemHotTrack(LPNMLISTVIEW nmlv);
+
+	// Checking for notifications.
+	BOOL IsDirectoryListView(HWND hWnd) const;
 };
 
 #endif // _RODENT_MAINWINDOW_H
