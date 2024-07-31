@@ -312,9 +312,11 @@ char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
 	*buf++ = ':';
 	buf = strcatp(buf, port);
 	*buf++ = '/';
-	*buf++ = (char)type;
-	if (addr->selector)
+	*buf = '\0';
+	if (addr->selector) {
+		*buf++ = (char)type;
 		buf = strcatp(buf, addr->selector);
+	}
 
 	return url;
 }
@@ -678,13 +680,13 @@ void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
 	}
 
 	/* Free history backwards. */
-	if (dir->prev && (recurse | RECURSE_BACKWARD)) {
+	if (dir->prev && (recurse & RECURSE_BACKWARD)) {
 		gopher_dir_free(dir->prev, RECURSE_BACKWARD, 1);
 		dir->prev = NULL;
 	}
 
 	/* Free history forwards. */
-	if (dir->next && (recurse | RECURSE_FORWARD)) {
+	if (dir->next && (recurse & RECURSE_FORWARD)) {
 		gopher_dir_free(dir->next, RECURSE_FORWARD, 1);
 		dir->next = NULL;
 	}
