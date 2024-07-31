@@ -14,8 +14,10 @@
 #include <errno.h>
 #ifdef _WIN32
 	#include <tchar.h>
+	#include <shlwapi.h>
 #else
 	#include <unistd.h>
+	#include <libgen.h>
 #endif /* _WIN32 */
 
 /* Networking includes. */
@@ -74,6 +76,9 @@
 
 /* Gopher line receive buffer size. */
 #define RECV_LINE_BUF 200
+
+/* Gopher file download buffer size. */
+#define RECV_FILE_BUF 1024
 
 /* Log levels. */
 typedef enum {
@@ -708,6 +713,170 @@ void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
 /*
  * +===========================================================================+
  * |                                                                           |
+ * |                             File Downloading                              |
+ * |                                                                           |
+ * +===========================================================================+
+ */
+
+/**
+ * Allocates and initializes a Gopher file download object.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param path Path to where to download the file to.
+ * @param hint Hint at the type of file we may be dealing with.
+ *
+ * @return Newly initialized Gopher file download object.
+ *
+ * @see gopher_file_free
+ */
+gopher_file_t *gopher_file_new(const char *path, gopher_type_t hint) {
+	gopher_file_t *gf;
+
+	/* Allocate the object. */
+	gf = (gopher_file_t *)malloc(sizeof(gopher_file_t));
+	if (gf == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate memory for Gopher file "
+			"download object");
+		return NULL;
+	}
+
+	/* Initialize the object. */
+	gf->fpath = strdup(path);
+	gf->fsize = 0;
+	gf->type = hint;
+
+	return gf;
+}
+
+/**
+ * Requests a file to download from a Gopher server.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param addr Gopherspace address object already connected to the server.
+ * @param hint Hint at the type of file we may be dealing with.
+ * @param path Path to where to download the file to.
+ * @param gf   Pointer to where the download information will be stored.
+ *
+ * @return 0 if the operation was successful. Check return against strerror() in
+ *         case of failure.
+ *
+ * @see gopher_file_free
+ */
+int gopher_file_download(const gopher_addr_t *addr, gopher_type_t hint,
+						 const char *path, gopher_file_t **gf) {
+	char buf[RECV_FILE_BUF];
+	size_t recv_len;
+	gopher_file_t *gfile;
+	FILE *fh;
+	int ret;
+	
+	/* Send selector of our request. */
+	ret = gopher_send_line(addr, (addr->selector) ? addr->selector : "", NULL);
+	if (ret != 0) {
+		log_errno(LOG_ERROR, "Failed to send line during download request");
+		return ret;
+	}
+	
+	/* Initialize download file object. */
+	*gf = gopher_file_new(path, hint);
+	if (*gf == NULL) {
+		log_errno(LOG_ERROR, "Failed to initialize download file object");
+		return -1;
+	}
+
+	/* Open file for writing. */
+	fh = fopen(path, "wb");
+	if (fh == NULL) {
+		log_errno(LOG_ERROR, "Failed to open download file for writing");
+		return errno;
+	}
+
+	/* Read everything that comes from the stream. */
+	gfile = *gf;
+	while ((ret = gopher_recv_raw(addr, buf, RECV_FILE_BUF, &recv_len, 0))
+			== 0) {
+		/* Check if the connection was terminated. */
+		if ((ret == 0) && (recv_len == 0))
+			break;
+		
+		/* Increase the size counter and write stream to file. */
+		gfile->fsize += recv_len;
+		fwrite(buf, sizeof(char), recv_len, fh);
+	}
+	fclose(fh);
+	fh = NULL;
+
+	/* Check if something went wrong. */
+	if (ret != 0) {
+		log_errno(LOG_ERROR, "Failed to download file");
+		gopher_file_free(*gf);
+		*gf = NULL;
+		return ret;
+	}
+
+	return 0;
+}
+
+/**
+ * Frees a Gopher file download object.
+ *
+ * @param gf Gopher file download object to be free'd.
+ */
+void gopher_file_free(gopher_file_t *gf) {
+	/* Is this even necessary? */
+	if (gf == NULL)
+		return;
+
+	/* Free the object's members. */
+	if (gf->fpath)
+		free(gf->fpath);
+	gf->fsize = 0;
+
+	/* Free the object itself. */
+	free(gf);
+}
+
+/**
+ * Gets the basename of a supposed file from a gopherspace address object.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param addr Gopherspace address object to extract a filename from.
+ *
+ * @return A file name extrapolated from the gopherspace address object.
+ */
+char *gopher_file_basename(const gopher_addr_t *addr) {
+	char *fname;
+
+	/* Try to get a valid filename from the selector. */
+#ifdef _WIN32
+	LPTSTR szPath;
+	LPTSTR szBaseName;
+
+	/* Convert the path to UTF-16 and get its basename. */
+	szPath = win_mbstowcs(addr->selector);
+	szBaseName = PathFindFileName(szPath);  /* shlwapi.lib */
+
+	/* Convert the basename to UTF-8 and free our temporary string. */
+	fname = win_wcstombs(szBaseName);
+	free(szPath);
+#else
+	fname = basename(addr->selector);
+#endif /* _WIN32 */
+	if ((*fname != '.') && (*fname != '/') && (*fname != '\\'))
+		return fname;
+	free(fname);
+	fname = NULL;
+
+	/* Build a fallback filename from the server hostname. */
+	return strdup(addr->host);
+}
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
  * |                             Item Line Parsing                             |
  * |                                                                           |
  * +===========================================================================+
@@ -725,7 +894,7 @@ void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
  *
  * @see gopher_item_free
  */
-gopher_item_t *gopher_item_new(gopher_type_t type, const char *label) {	
+gopher_item_t *gopher_item_new(gopher_type_t type, const char *label) {
 	gopher_item_t *item;
 
 	/* Allocate the object. */

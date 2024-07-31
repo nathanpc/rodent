@@ -108,6 +108,15 @@ typedef struct gopher_dir_s {
 	uint16_t err_count;
 } gopher_dir_t;
 
+/**
+ * Gopher downloaded file object.
+ */
+typedef struct gopher_file_s {
+	char *fpath;
+	size_t fsize;
+	gopher_type_t type;
+} gopher_file_t;
+
 /* Gopherspace address handling. */
 gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 							   const char *selector);
@@ -124,6 +133,13 @@ int gopher_disconnect(gopher_addr_t *addr);
 int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir);
 void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
 					 int inclusive);
+
+/* File download handling. */
+gopher_file_t *gopher_file_new(const char *path, gopher_type_t hint);
+int gopher_file_download(const gopher_addr_t *addr, gopher_type_t hint,
+						 const char *path, gopher_file_t **gf);
+void gopher_file_free(gopher_file_t *gf);
+char *gopher_file_basename(const gopher_addr_t *addr);
 
 /* Item line parsing */
 int gopher_item_parse(gopher_item_t **item, const char *line);
