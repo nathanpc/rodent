@@ -46,6 +46,7 @@ private:
 	void ResizeStatusBar(LPCRECT lprcClient);
 
 	// Control helpers.
+	void LoadDirectory();
 	void AddDirectoryEntry(size_t nIndex);
 	void SetStatusAddress(LPCTSTR szAddress);
 	void SetStatusMessage(LPCTSTR szMsg);
@@ -62,9 +63,12 @@ public:
 	// Controls setup.
 	BOOL SetupControls(HWND hWnd);
 	BOOL ResizeWindows(HWND hwndParent);
+	void UpdateControls();
 
 	// Browser navigation.
 	void BrowseTo(LPCTSTR szURL);
+	void GoBack();
+	void GoNext();
 
 	// Notification handling.
 	LRESULT HandleItemHover(LPNMHDR nmh);
@@ -72,6 +76,7 @@ public:
 
 	// Checking for notifications.
 	BOOL IsDirectoryListView(HWND hWnd) const;
+	BOOL IsAddressComboBox(HWND hWnd) const;
 };
 
 #endif // _RODENT_MAINWINDOW_H

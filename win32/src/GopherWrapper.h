@@ -92,16 +92,21 @@ private:
 	void replicate_items();
 
 public:
-	Directory::Directory(gopher_addr_t *goaddr);
+	Directory(gopher_addr_t *goaddr);
 	Directory(Address *addr);
 	Directory(gopher_dir_t *dir);
 	virtual ~Directory();
 
+	void set_ownership(bool owner);
+	void free(gopher_recurse_dir_t recurse, bool inclusive);
 	void free(gopher_recurse_dir_t recurse);
 	void free(int recurse_flags);
 
-	Directory prev() const;
-	Directory next() const;
+	Directory *push(gopher_addr_t *goaddr);
+	void set_prev(Directory *dir);
+	void set_next(Directory *dir);
+	Directory *prev() const;
+	Directory *next() const;
 	bool has_prev() const;
 	bool has_next() const;
 

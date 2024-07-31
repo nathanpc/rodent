@@ -511,14 +511,56 @@ void Directory::replicate_items() {
 }
 
 /**
+ * Retrieves the directory of another gopherhole and pushes it into the history
+ * stack.
+ *
+ * @param goaddr Gopherspace address structure. Will be managed by the library,
+ *               do not free after passing it into this method.
+ *
+ * @return Directory object retrieved from the requested server.
+ */
+Directory *Directory::push(gopher_addr_t *goaddr) {
+	// Retrieve new directory.
+	Directory *dir = new Directory(goaddr);
+	dir->set_ownership(false);
+
+	// Free everything that should no longer be in the history.
+	this->free(RECURSE_FORWARD, false);
+	
+	// Ensure the history stack link is preserved.
+	dir->set_prev(this);
+	this->set_next(dir);
+
+	return dir;
+}
+
+/**
+ * Sets the previous directory pointer in the history stack.
+ *
+ * @param dir New previous directory.
+ */
+void Directory::set_prev(Directory *dir) {
+	this->m_dir->prev = const_cast<gopher_dir_t *>(dir->c_dir());
+}
+
+/**
+ * Sets the next directory pointer in the history stack.
+ *
+ * @param dir New next directory.
+ */
+void Directory::set_next(Directory *dir) {
+	this->m_dir->next = const_cast<gopher_dir_t *>(dir->c_dir());
+}
+
+/**
  * Gets the previous directory in the browser stack.
  *
  * @return Previous directory object.
  *
  * @see Directory::has_prev
  */
-Directory Directory::prev() const {
-	return Directory(this->m_dir->prev);
+Directory *Directory::prev() const {
+	return new Directory(this->m_dir->prev);
 }
 
 /**
@@ -528,8 +570,8 @@ Directory Directory::prev() const {
  *
  * @see Directory::has_next
  */
-Directory Directory::next() const {
-	return Directory(this->m_dir->next);
+Directory *Directory::next() const {
+	return new Directory(this->m_dir->next);
 }
 
 /**
@@ -564,16 +606,32 @@ const std::vector<Item> *Directory::items() {
 }
 
 /**
- * Frees the internal structure help by this object.
+ * Sets the ownership of the internal structures.
  *
- * @param recurse Bitwise field to recursively free its history stack.
+ * @param owner Are we supposed to own the internal structures and free them
+ *              when the destructor gets called?
  */
-void Directory::free(gopher_recurse_dir_t recurse) {
+void Directory::set_ownership(bool owner) {
+	this->m_bOwner = owner;
+}
+
+/**
+ * Frees the internal structures held by this object.
+ *
+ * @param recurse   Bitwise field to recursively free its history stack.
+ * @param inclusive Should we also free our own internal directory pointer?
+ */
+void Directory::free(gopher_recurse_dir_t recurse, bool inclusive) {
 	// Free underlying structure.
 	if (this->m_dir != nullptr) {
-		gopher_dir_free(this->m_dir, recurse, 1);
-		this->m_dir = nullptr;
+		gopher_dir_free(this->m_dir, recurse, inclusive);
+		if (inclusive)
+			this->m_dir = nullptr;
 	}
+
+	// Stop if we shouldn't free ourselves.
+	if (!inclusive)
+		return;
 
 	// Free cached items.
 	if (this->m_items != nullptr) {
@@ -596,7 +654,16 @@ void Directory::free(gopher_recurse_dir_t recurse) {
 }
 
 /**
- * Frees the internal structure help by this object.
+ * Frees the internal structures held by this object.
+ *
+ * @param recurse Bitwise field to recursively free its history stack.
+ */
+void Directory::free(gopher_recurse_dir_t recurse) {
+	this->free(recurse, true);
+}
+
+/**
+ * Frees the internal structures held by this object.
  *
  * @param recurse_flags Bitwise field to recursively free its history stack.
  */

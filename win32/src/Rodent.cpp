@@ -287,10 +287,19 @@ LRESULT WndMainCommand(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 	switch (wmId) {
 		case IDM_ABOUT:
 			AboutDialog(wndMain->hInst, hWnd).ShowModal();
-			break;
+			return 0;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
-			break;
+			return 0;
+		case IDM_BACK:
+			wndMain->GoBack();
+			return 0;
+		case IDM_NEXT:
+			wndMain->GoNext();
+			return 0;
+		case IDM_GO:
+			wndMain->BrowseTo(NULL);
+			return 0;
 	}
 
 	return DefWindowProc(hWnd, wMsg, wParam, lParam);
@@ -310,12 +319,25 @@ LRESULT WndMainNotify(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 	LPNMHDR nmh = (LPNMHDR)lParam;
 	switch (nmh->code) {
 	case LVN_HOTTRACK:
+		// Directory ListView hot tracking.
 		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
 			return wndMain->HandleItemHotTrack((LPNMLISTVIEW)lParam);
 		break;
 	case NM_HOVER:
+		// Directory ListView item hovering.
 		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
 			return wndMain->HandleItemHover(nmh);
+		break;
+	case CBEN_ENDEDIT:
+		// Address ComboBoxEx item input ended or item selected.
+		if (wndMain->IsAddressComboBox(nmh->hwndFrom)) {
+			PNMCBEENDEDIT pnmEditInfo = (PNMCBEENDEDIT)lParam;
+			if (pnmEditInfo->fChanged && ((pnmEditInfo->iWhy == CBENF_DROPDOWN) ||
+					(pnmEditInfo->iWhy == CBENF_RETURN))) {
+				wndMain->BrowseTo(pnmEditInfo->szText);
+			}
+			return 0;
+		}
 		break;
 	}
 

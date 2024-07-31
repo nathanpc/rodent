@@ -85,18 +85,38 @@ MainWindow::~MainWindow() {
 /**
  * Navigates the browser to a specific gopherspace URL.
  *
- * @param szURL Gopherspace URL to navigate to.
+ * @param szURL Gopherspace URL to navigate to. Use NULL to get the value from
+ *              the address combo control.
  */
 void MainWindow::BrowseTo(LPCTSTR szURL) {
 	gopher_type_t type = GOPHER_TYPE_UNKNOWN;
 	gopher_addr_t *addr = NULL;
+	LPTSTR szAddress = NULL;
+
+	// Get URL from address bar.
+	if (szURL == NULL) {
+		szAddress = GetWindowTextAlloc(hwndAddressCombo);
+		szURL = szAddress;
+	}
+
+	// Ensure we don't run into weird race conditions with the directory.
+	ListView_DeleteAllItems(hwndDirectory);
 
 	try {
 		// Get gopherspace address structure from URL.
 		addr = Gopher::Address::from_url(szURL, &type);
+		if (szAddress) {
+			free(szAddress);
+			szAddress = NULL;
+			szURL = NULL;
+		}
 
 		if (goInitialDirectory != nullptr) {
-			// TODO: Get directory from requested address.
+			// Get directory from requested address.
+			Gopher::Directory *dirOld = goDirectory;
+			goDirectory = dirOld->push(addr);
+			if (dirOld != goInitialDirectory)
+				delete dirOld;
 		} else {
 			// Ensure we have an initial directory to start off.
 			goInitialDirectory = new Gopher::Directory(addr);
@@ -119,11 +139,64 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 		std::free(szMessage);
 #endif // UNICODE
 
+		UpdateControls();
 		return;
 	}
 
+	// Update the interface to show our fetched directory.
+	LoadDirectory();
+}
+
+/**
+ * Goes back to the previous directory in the history stack.
+ */
+void MainWindow::GoBack() {
+	// Check if we have something to go to.
+	if (!goDirectory->has_prev()) {
+		MsgBoxInfo(this->hWnd, _T("No previous gopherhole"),
+			_T("No previous gopherhole is available to go back to."));
+		return;
+	}
+
+	// Go to the previous directory.
+	Gopher::Directory *dirOld = goDirectory;
+	goDirectory = dirOld->prev();
+	delete dirOld;
+
+	// Update everything.
+	LoadDirectory();
+}
+
+/**
+ * Goes to the next directory in the history stack.
+ */
+void MainWindow::GoNext() {
+	// Check if we have something to go to.
+	if (!goDirectory->has_next()) {
+		MsgBoxInfo(this->hWnd, _T("No next gopherhole"),
+			_T("No next gopherhole is available to go forward to."));
+		return;
+	}
+
+	// Go to the previous directory.
+	Gopher::Directory *dirOld = goDirectory;
+	goDirectory = dirOld->next();
+	delete dirOld;
+
+	// Update everything.
+	LoadDirectory();
+}
+
+/**
+ * Loads the current directory in the UI.
+ */
+void MainWindow::LoadDirectory() {
+	// Start with a clean slate.
+	ListView_DeleteAllItems(hwndDirectory);
+
 	// Reset the address bar contents with parsed address.
-	TCHAR *szNewURL = Gopher::Address::as_url(addr, type);
+	TCHAR *szNewURL = Gopher::Address::as_url(goDirectory->c_dir()->addr,
+		GOPHER_TYPE_DIR);
 	SetWindowText(hwndAddressCombo, szNewURL);
 	free(szNewURL);
 
@@ -138,7 +211,6 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 	}
 
 	// Populate the directory list view.
-	ListView_DeleteAllItems(hwndDirectory);
 	if (goDirectory->items_count() > 0) {
 		for (size_t i = 0; i < goDirectory->items_count(); i++)
 			AddDirectoryEntry(i);
@@ -147,6 +219,9 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 			_T("This page was intentionally left blank."));
 	}
 	ListView_SetColumnWidth(hwndDirectory, 0, LVSCW_AUTOSIZE);
+
+	// Ensure the state of everything is up-to-date.
+	UpdateControls();
 }
 
 /**
@@ -245,6 +320,17 @@ LRESULT MainWindow::HandleItemHotTrack(LPNMLISTVIEW nmlv) {
 }
 
 /**
+ * Updates the state of controls related to the browser to reflect changes in
+ * internal objects.
+ */
+void MainWindow::UpdateControls() {
+	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_BACK,
+		(LPARAM)(goDirectory && goDirectory->has_prev()));
+	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_NEXT,
+		(LPARAM)(goDirectory && goDirectory->has_next()));
+}
+
+/**
  * Sets up the layout of the window's controls.
  *
  * @param hWnd Main window handle.
@@ -268,6 +354,9 @@ BOOL MainWindow::SetupControls(HWND hWnd) {
 		return FALSE;
 	if (CreateDirectoryView() == NULL)
 		return FALSE;
+
+	// Get everything on a known state.
+	UpdateControls();
 
 	// Go to the initial gopherhole.
 	BrowseTo(strInitialURL.c_str());
@@ -577,7 +666,7 @@ HWND MainWindow::CreateDirectoryView() {
 		return NULL;
 	ListView_SetExtendedListViewStyle(hwndDirectory, LVS_EX_FULLROWSELECT |
 		LVS_EX_TRACKSELECT | LVS_EX_ONECLICKACTIVATE | LVS_EX_UNDERLINEHOT);
-	ListView_SetHoverTime(hwndDirectory, 100);
+	ListView_SetHoverTime(hwndDirectory, 10);
 
 	// Ensure we use a monospace font for that nice ASCII art.
 	HFONT hFont = (HFONT)GetStockObject(ANSI_FIXED_FONT);
@@ -610,4 +699,15 @@ HWND MainWindow::CreateDirectoryView() {
  */
 BOOL MainWindow::IsDirectoryListView(HWND hWnd) const {
 	return this->hwndDirectory == hWnd;
+}
+
+/**
+ * Checks if a window handle is for the address bar ComboBoxEx.
+ *
+ * @param hWnd Window handle to be tested.
+ *
+ * @return TRUE if the window handle is in fact of the address bar ComboBoxEx.
+ */
+BOOL MainWindow::IsAddressComboBox(HWND hWnd) const {
+	return this->hwndAddressCombo == hWnd;
 }
