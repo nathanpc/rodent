@@ -59,9 +59,9 @@
 #endif /* ssize_t */
 
 /* Ensure we have snprintf on Windows. */
-#ifndef snprintf
+#if defined(_WIN32) && !defined(snprintf)
 	#define snprintf _snprintf
-#endif /* snprintf */
+#endif /* defined(_WIN32) && !defined(snprintf) */
 
 #ifdef _WIN32
 /* FormatMessage default flags. */
@@ -593,7 +593,7 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		/* Check if we have reached the termination line. */
 		if (gopher_is_termline(line)) {
 			termlined = 1;
-			continue;
+			goto nextline;
 		}
 
 		/* Check if we have terminated the connection. */
@@ -603,7 +603,7 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		/* Check if a monstrosity of a server just sent a blank line. */
 		if ((line[0] == '\r') && (line[1] == '\n')) {
 			pd->err_count++;
-			continue;
+			goto nextline;
 		}
 
 		/* Parse line item. */
@@ -640,11 +640,12 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		prev = item;
 		pd->items_len++;
 
+nextline:
 		/* Clean up any temporary resources. */
 		free(line);
 		line = NULL;
 	}
-	
+
 	/* Check if server never sent the termination dot. */
 	if (!termlined) {
 		log_printf(LOG_WARNING, "Server never sent termination dot\n");
@@ -1106,6 +1107,7 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 	char *nbuf;
 	char *n;
 	const char *b;
+	int ret;
 
 	/* Get string length and allocate a buffer big enough for it plus CRLF. */
 	len = strlen(buf) + 2;
@@ -1130,7 +1132,12 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 #endif /* DEBUG */
 	
 	/* Send the line over the network. */
-	return gopher_send_raw(addr, (void *)nbuf, len, sent_len);
+	ret = gopher_send_raw(addr, (void *)nbuf, len, sent_len);
+
+	/* Free temporary resources. */
+	free(nbuf);
+
+	return ret;
 }
 
 /**
