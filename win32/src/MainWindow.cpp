@@ -148,6 +148,18 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 }
 
 /**
+ * Navigates the browser to a Gopher entry item.
+ *
+ * @param goItem Gopher entry item to navigate to.
+ */
+void MainWindow::BrowseTo(const Gopher::Item& goItem) {
+	LPTSTR szAddress = goItem.to_url();
+	BrowseTo(szAddress);
+	free(szAddress);
+	szAddress = NULL;
+}
+
+/**
  * Goes back to the previous directory in the history stack.
  */
 void MainWindow::GoBack() {
@@ -314,6 +326,78 @@ LRESULT MainWindow::HandleItemHotTrack(LPNMLISTVIEW nmlv) {
 	if (item.type() == GOPHER_TYPE_INFO) {
 		SetStatusAddress(_T(""));
 		nmlv->iItem = -1;
+	}
+
+	return 0;
+}
+
+/**
+ * Handles the actions to take place when the user clicks on an item in the
+ * directory ListView.
+ *
+ * @param nmia Information about the LVN_ITEMACTIVATE notification.
+ *
+ * @return Must always return 0.
+ */
+LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
+	// Get hovered item.
+	Gopher::Item item = goDirectory->items()->at(nmia->iItem);
+
+	// Ignore information items.
+	switch (item.type()) {
+	case GOPHER_TYPE_INFO:
+	case GOPHER_TYPE_ERROR:
+		// Do nothing on info or error entries.
+		break;
+	case GOPHER_TYPE_DIR:
+		// Handle directory links.
+		BrowseTo(item);
+		break;
+	case GOPHER_TYPE_TEXT:
+	case GOPHER_TYPE_BINHEX:
+	case GOPHER_TYPE_UNIX:
+	case GOPHER_TYPE_XML:
+		// Handle text links.
+		// TODO
+		break;
+	case GOPHER_TYPE_DOS:
+	case GOPHER_TYPE_BINARY:
+		// Handle binary links.
+		// TODO
+		break;
+	case GOPHER_TYPE_SEARCH:
+		// Handle search links.
+		MsgBoxError(this->hWnd, _T("Search not supported"),
+			_T("The search feature still hasn't been implemented."));
+		break;
+	case GOPHER_TYPE_TELNET:
+	case GOPHER_TYPE_TN3270:
+		// Handle telnet links.
+		MsgBoxError(this->hWnd, _T("Telnet not supported"),
+			_T("The telnet feature still hasn't been implemented."));
+		break;
+	case GOPHER_TYPE_GIF:
+	case GOPHER_TYPE_IMAGE:
+	case GOPHER_TYPE_BITMAP:
+	case GOPHER_TYPE_PNG:
+	case GOPHER_TYPE_MOVIE:
+	case GOPHER_TYPE_AUDIO:
+	case GOPHER_TYPE_WAV:
+	case GOPHER_TYPE_DOC:
+	case GOPHER_TYPE_PDF:
+		// Handle binary files with auto open.
+		// TODO
+		break;
+	case GOPHER_TYPE_HTML:
+		// Handle HTTP requests using a proper browser.
+		// TODO
+		break;
+	default:
+		// Unknown file types.
+		MsgBoxError(this->hWnd, _T("Unknown entry type"),
+			_T("Unable to open an entry which the type is unknown to the ")
+			_T("application. Please contact the developer."));
+		break;
 	}
 
 	return 0;

@@ -328,6 +328,11 @@ LRESULT WndMainNotify(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
 			return wndMain->HandleItemHover(nmh);
 		break;
+	case LVN_ITEMACTIVATE:
+		// Directory ListView item clicked (activated).
+		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
+			return wndMain->HandleItemActivate((LPNMITEMACTIVATE)lParam);
+		break;
 	case CBEN_ENDEDIT:
 		// Address ComboBoxEx item input ended or item selected.
 		if (wndMain->IsAddressComboBox(nmh->hwndFrom)) {

@@ -67,12 +67,14 @@ public:
 
 	// Browser navigation.
 	void BrowseTo(LPCTSTR szURL);
+	void BrowseTo(const Gopher::Item& goItem);
 	void GoBack();
 	void GoNext();
 
 	// Notification handling.
 	LRESULT HandleItemHover(LPNMHDR nmh);
 	LRESULT HandleItemHotTrack(LPNMLISTVIEW nmlv);
+	LRESULT HandleItemActivate(LPNMITEMACTIVATE nmia);
 
 	// Checking for notifications.
 	BOOL IsDirectoryListView(HWND hWnd) const;
