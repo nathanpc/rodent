@@ -59,9 +59,9 @@
 #endif /* ssize_t */
 
 /* Ensure we have snprintf on Windows. */
-#ifndef snprintf
+#if defined(_WIN32) && !defined(snprintf)
 	#define snprintf _snprintf
-#endif /* snprintf */
+#endif /* defined(_WIN32) && !defined(snprintf) */
 
 #ifdef _WIN32
 /* FormatMessage default flags. */

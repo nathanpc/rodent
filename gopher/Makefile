@@ -4,7 +4,7 @@ GDB = gdb --args
 RM  = rm -f
 
 # Flags
-CFLAGS  = -Wall --std=c89
+CFLAGS  = -Wall --std=gnu89
 LDFLAGS =
 LIBS    =
 
