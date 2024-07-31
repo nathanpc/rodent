@@ -1525,6 +1525,16 @@ char *strcatp(char *dest, const char *src) {
 	const char *s;
 	char *p;
 
+	/* Are we supposed to do anything? */
+	if (dest == NULL)
+		return NULL;
+	if (src == NULL)
+		return dest;
+	if (*src == '\0') {
+		*dest = '\0';
+		return dest;
+	}
+
 	/* Copy the string over. */
 	s = src;
 	p = dest;
