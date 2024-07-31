@@ -698,3 +698,150 @@ uint16_t Directory::error_count() const {
 const gopher_dir_t *Directory::c_dir() const {
 	return const_cast<const gopher_dir_t *>(this->m_dir);
 }
+
+/*
+ * +===========================================================================+
+ * |                                                                           |
+ * |                              File Downloads                               |
+ * |                                                                           |
+ * +===========================================================================+
+ */
+
+/**
+ * Creates a blank downloaded file object.
+ */
+FileDownload::FileDownload() {
+	this->m_gfile = NULL;
+	this->m_fpath = NULL;
+}
+
+/**
+ * Creates a downloaded file object.
+ *
+ * @param gfile Internal Gopher file download structure. Will be managed by
+ *              this object.
+ */
+FileDownload::FileDownload(gopher_file_t *gfile) {
+	this->m_gfile = gfile;
+	this->m_fpath = NULL;
+}
+
+/**
+ * Deallocates and cleans up internal objects.
+ */
+FileDownload::~FileDownload() {
+	if (this->m_gfile)
+		gopher_file_free(this->m_gfile);
+	if (this->m_fpath)
+		free(this->m_fpath);
+}
+
+/**
+ * Download the file from the specified gopherspace address.
+ *
+ * @param goaddr Gopherspace address structure. Will NOT be managed by the
+ *               object, you are responsible for freeing this.
+ * @param hint   Hint at the type of file we may be dealing with.
+ * @param fpath  Path to where the downloaded file should be written. Pass NULL
+ *               to extrapolate one from the address and download to the
+ *               temporary folder.
+ */
+void FileDownload::download(gopher_addr_t *goaddr, gopher_type_t hint,
+							const TCHAR *fpath) {
+	int ret;
+
+	// Connect to the server.
+	ret = gopher_connect(goaddr);
+	if (ret != 0) {
+		// Build up the exception message.
+		std::string msg("Failed to connect to server: ");
+		msg += strerror(ret);
+		throw std::exception(msg.c_str());
+	}
+
+	// Get the file path.
+	char *fp = NULL;
+	if (fpath) {
+#ifdef UNICODE
+		fp = win_wcstombs(fpath);
+#else
+		fp = strdup(fpath);
+#endif // UNICODE
+	} else {
+		// Get a default temporary file path if one wasn't supplied.
+		DWORD dwLen = GetTempPath(0, NULL);
+		TCHAR *szTempPath = (TCHAR *)malloc((dwLen + 1) * sizeof(TCHAR));
+		if (szTempPath == NULL) {
+			gopher_disconnect(goaddr);
+			throw std::exception("Failed to allocate temporary folder string");
+		}
+		GetTempPath(dwLen + 1, szTempPath);
+
+		// Get file basename and allocate path string.
+		char *bname = gopher_file_basename(goaddr);
+		fp = (char *)malloc((dwLen + strlen(bname) + 1) * sizeof(char));
+		if (fp == NULL) {
+			gopher_disconnect(goaddr);
+			throw std::exception("Failed to allocate temporary path string");
+		}
+
+		// Build up a path to the actual temporary file.
+#ifdef UNICODE
+		char *tpath = win_wcstombs(szTempPath);
+		strcpy(fp, tpath);
+		free(tpath);
+#else
+		strcpy(fp, szTempPath);
+#endif // UNICODE
+		strcat(fp, bname);
+		free(szTempPath);
+		free(bname);
+	}
+
+	// Download file from address.
+	ret = gopher_file_download(goaddr, hint, fp, &this->m_gfile);
+	free(fp);
+	fp = NULL;
+	if (ret != 0) {
+		// Build up the exception message.
+		std::string msg("Failed to request directory: ");
+		msg += strerror(ret);
+		throw std::exception(msg.c_str());
+	}
+
+	// Gracefully disconnect from the server.
+	ret = gopher_disconnect(goaddr);
+	if (ret != 0)
+		perror("Failed to disconnect");
+}
+
+/**
+ * Gets the path where the file was downloaded to.
+ *
+ * @return Path to where the downloaded file is.
+ */
+const TCHAR *FileDownload::path() {
+	// Convert the path to Unicode if needed.
+	if (this->m_fpath == NULL)
+		this->m_fpath = win_mbstowcs(this->m_gfile->fpath);
+
+	return const_cast<const TCHAR *>(this->m_fpath);
+}
+
+/**
+ * Gets the size of the downloaded file.
+ *
+ * @return Size of the downloaded file in bytes.
+ */
+size_t FileDownload::size() const {
+	return this->m_gfile->fsize;
+}
+
+/**
+ * Gets the internal file download structure.
+ *
+ * @return Internal file download structure.
+ */
+const gopher_file_t *FileDownload::c_file() const {
+	return const_cast<const gopher_file_t *>(this->m_gfile);
+}

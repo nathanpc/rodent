@@ -354,16 +354,18 @@ LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
 		BrowseTo(item);
 		break;
 	case GOPHER_TYPE_TEXT:
-	case GOPHER_TYPE_BINHEX:
-	case GOPHER_TYPE_UNIX:
 	case GOPHER_TYPE_XML:
 		// Handle text links.
-		// TODO
+		DownloadTextFile(item);
 		break;
+	case GOPHER_TYPE_BINHEX:
+	case GOPHER_TYPE_UNIX:
 	case GOPHER_TYPE_DOS:
 	case GOPHER_TYPE_BINARY:
-		// Handle binary links.
-		// TODO
+		// Handle binary and "binary" links.
+		// TODO: Download to downloads folder.
+		MsgBoxError(this->hWnd, _T("Not yet implemented"),
+			_T("Downloading binaries hasn't been implemented yet."));
 		break;
 	case GOPHER_TYPE_SEARCH:
 		// Handle search links.
@@ -373,24 +375,26 @@ LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
 	case GOPHER_TYPE_TELNET:
 	case GOPHER_TYPE_TN3270:
 		// Handle telnet links.
-		MsgBoxError(this->hWnd, _T("Telnet not supported"),
-			_T("The telnet feature still hasn't been implemented."));
+		OpenShellLink(item);
 		break;
 	case GOPHER_TYPE_GIF:
 	case GOPHER_TYPE_IMAGE:
 	case GOPHER_TYPE_BITMAP:
 	case GOPHER_TYPE_PNG:
+		// Handle image files.
+		DownloadImage(item);
+		break;
 	case GOPHER_TYPE_MOVIE:
 	case GOPHER_TYPE_AUDIO:
 	case GOPHER_TYPE_WAV:
 	case GOPHER_TYPE_DOC:
 	case GOPHER_TYPE_PDF:
 		// Handle binary files with auto open.
-		// TODO
+		DownloadOpenDefault(item);
 		break;
 	case GOPHER_TYPE_HTML:
 		// Handle HTTP requests using a proper browser.
-		// TODO
+		OpenShellLink(item);
 		break;
 	default:
 		// Unknown file types.
@@ -401,6 +405,135 @@ LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
 	}
 
 	return 0;
+}
+
+/**
+ * Opens a link referenced in a Gopher entry item.
+ *
+ * @param goItem Gopher entry item to open its referenced link.
+ */
+void MainWindow::OpenShellLink(const Gopher::Item& goItem) {
+	std::string strURL;
+
+	// Check if it's a telnet item.
+	switch (goItem.type()) {
+	case GOPHER_TYPE_TELNET:
+	case GOPHER_TYPE_TN3270:
+		// Create telnet URL.
+		MsgBoxError(this->hWnd, _T("Telnet not yet supported"),
+			_T("The telnet feature still hasn't been implemented."));
+		return;
+	case GOPHER_TYPE_HTML:
+		// Convert to HTTP URL.
+		strURL = goItem.c_item()->addr->selector;
+		if (strURL.find("URL:") != 0) {
+			MsgBoxError(this->hWnd, _T("Unsupported hyperlink"),
+				_T("Unsupported hyperlink format in selector string."));
+			return;
+		}
+		strURL = strURL.substr(4);
+		break;
+	}
+
+	// Open the requested link.
+#ifdef UNICODE
+	LPTSTR szURL = win_mbstowcs(strURL.c_str());
+	ShellExecute(this->hWnd, _T("open"), szURL, NULL, NULL, SW_NORMAL);
+	free(szURL);
+	szURL = NULL;
+#else
+	ShellExecute(this->hWnd, _T("open"), strURL.c_str(), NULL, NULL, SW_NORMAL);
+#endif // UNICODE
+}
+
+/**
+ * Downloads a file related to an item.
+ *
+ * @param goItem Gopher entry item to download.
+ *
+ * @return Downloaded file object.
+ */
+Gopher::FileDownload *MainWindow::DownloadFile(const Gopher::Item& goItem) {
+	Gopher::FileDownload *fdl = new Gopher::FileDownload();
+
+	try {
+		fdl->download(goItem.c_item()->addr, goItem.type(), nullptr);
+	} catch (const std::exception& e) {
+#ifdef UNICODE
+		// Convert the Unicode string to multi-byte.
+		TCHAR *szMessage = win_mbstowcs(e.what());
+		if (szMessage == NULL)
+			throw std::exception("Failed to convert exception to wide string");
+#else
+		const char *szMessage = e.what();
+#endif // UNICODE
+
+		MsgBoxError(this->hWnd, _T("Failed to download file"), szMessage);
+
+#ifdef UNICODE
+		// Free the temporary buffer.
+		std::free(szMessage);
+#endif // UNICODE
+
+		delete fdl;
+		return nullptr;
+	}
+
+	return fdl;
+}
+
+/**
+ * Downloads and displays a text file to the user.
+ *
+ * @param goItem Gopher entry item to download.
+ */
+void MainWindow::DownloadTextFile(const Gopher::Item& goItem) {
+	// Download the file.
+	Gopher::FileDownload *fdl = DownloadFile(goItem);
+	if (fdl == nullptr)
+		return;
+
+	// Open the file.
+	ShellExecute(this->hWnd, _T("open"), _T("notepad.exe"), fdl->path(), NULL,
+		SW_NORMAL);
+	delete fdl;
+}
+
+/**
+ * Downloads and displays an image to the user.
+ *
+ * @param goItem Gopher entry item to download.
+ */
+void MainWindow::DownloadImage(const Gopher::Item& goItem) {
+	DownloadOpenDefault(goItem);
+}
+
+/**
+ * Downloads a file and automatically open it with the default application.
+ *
+ * @param goItem Gopher entry item to download.
+ */
+void MainWindow::DownloadOpenDefault(const Gopher::Item& goItem) {
+	// Download the file.
+	Gopher::FileDownload *fdl = DownloadFile(goItem);
+	if (fdl == nullptr)
+		return;
+
+	// Open the file.
+	int ret = (int)ShellExecute(this->hWnd, _T("open"), fdl->path(), NULL,
+		NULL, SW_NORMAL);
+	if (ret <= 32) {
+		// Looks like we were unable to open the file. Display a picker dialog.
+		// TODO: Use the "openas" verb or SHOpenWithDialog on Windows Vista and above.
+		//       https://stackoverflow.com/questions/6364879
+		tstring strParams = _T("Shell32,OpenAs_RunDLL ");
+		strParams += fdl->path();
+		ShellExecute(this->hWnd, _T("open"), _T("RUNDLL32"), strParams.c_str(),
+			NULL, SW_NORMAL);
+	}
+
+	// Delete the file download object.
+	delete fdl;
 }
 
 /**

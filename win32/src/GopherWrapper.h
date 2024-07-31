@@ -117,6 +117,27 @@ public:
 	const gopher_dir_t *c_dir() const;
 };
 
+/**
+ * Gopher file download.
+ */
+class FileDownload {
+private:
+	gopher_file_t *m_gfile;
+	TCHAR *m_fpath;
+
+public:
+	FileDownload();
+	FileDownload(gopher_file_t *gfile);
+	virtual ~FileDownload();
+
+	void download(gopher_addr_t *goaddr, gopher_type_t hint,
+				  const TCHAR *fpath);
+
+	const TCHAR *path();
+	size_t size() const;
+	const gopher_file_t *c_file() const;
+};
+
 };
 
 #endif // _WINRODENT_GOPHER_H

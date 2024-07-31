@@ -51,6 +51,13 @@ private:
 	void SetStatusAddress(LPCTSTR szAddress);
 	void SetStatusMessage(LPCTSTR szMsg);
 
+	// Download helpers.
+	void OpenShellLink(const Gopher::Item& goItem);
+	Gopher::FileDownload *DownloadFile(const Gopher::Item& goItem);
+	void DownloadTextFile(const Gopher::Item& goItem);
+	void DownloadImage(const Gopher::Item& goItem);
+	void DownloadOpenDefault(const Gopher::Item& goItem);
+
 public:
 	// Global handles.
 	HINSTANCE hInst;
