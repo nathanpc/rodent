@@ -122,6 +122,7 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 							   const char *selector);
 gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type);
 char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type);
+int gopher_addr_up(gopher_addr_t **parent, const gopher_addr_t *addr);
 void gopher_addr_print(const gopher_addr_t *addr);
 void gopher_addr_free(gopher_addr_t *addr);
 

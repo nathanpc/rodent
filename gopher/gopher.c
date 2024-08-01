@@ -173,7 +173,11 @@ gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
 	gopher_addr_t *addr;
 	const char *p;
 	const char *pend;
-	
+
+	/* Ensure we make the type unknown first. */
+	if (type)
+		*type = GOPHER_TYPE_UNKNOWN;
+
 	/* Check if it starts with protocol. */
 	p = strstr(uri, "gopher://");
 	if (p != NULL) {
@@ -324,6 +328,96 @@ char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
 	}
 
 	return url;
+}
+
+/**
+ * Tries to get the parent selector of a gopherspace address.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param parent Optional. Pointer to store the parent gopherspace address.
+ * @param addr   Gopherspace address to try to get the parent from.
+ *
+ * @return TRUE if there's a parent available. FALSE if address is already at
+ *              the top-level. -1 will be returned on error (check errno).
+ */
+int gopher_addr_up(gopher_addr_t **parent, const gopher_addr_t *addr) {
+	char *selparent;
+	char *tmp;
+#ifdef _WIN32
+	const char *p;
+	const char *lastslash;
+#endif /* _WIN32 */
+
+	/* Perform simple checks before trying fancy things. */
+	if ((addr->selector == NULL) || (addr->selector[0] == '\0') ||
+			((addr->selector[0] == '/') && (addr->selector[1] == '\0'))) {
+		if (parent != NULL)
+			*parent = NULL;
+		return 0;
+	}
+
+#ifdef _WIN32
+	/* Try to find the last occurrence of a slash. */
+	lastslash = NULL;
+	p = addr->selector;
+	while (*p != '\0') {
+		if ((*p == '/') && (*(p + 1) != '\0'))
+			lastslash = p;
+		p++;
+	}
+	p = addr->selector;
+
+	/* Check if parent is top-level. */
+	if ((lastslash == NULL) || (lastslash == p)) {
+		selparent = NULL;
+		goto buildparent;
+	}
+
+	/* Allocate a string to hold the parent selector. */
+	selparent = (char *)malloc((lastslash - p + 1) * sizeof(char));
+	if (selparent == NULL) {
+		log_errno(LOG_ERROR, "Failed to allocate parent selector string");
+		if (parent != NULL)
+			*parent = NULL;
+		return -1;
+	}
+
+	/* Copy the parent string over. */
+	tmp = selparent;
+	while (p != lastslash) {
+		*tmp++ = *p++;
+	}
+	*tmp = '\0';
+	tmp = NULL;
+
+buildparent:
+#else
+	/* Duplicate input in order to comply with POSIX dirname. */
+	tmp = strdup(addr->selector);
+	selparent = strdup(dirname(tmp));
+	free(tmp);
+	tmp = NULL;
+
+	/* Check if parent is top-level. */
+	if ((*selparent == '.') || ((*selparent == '/') &&
+			(*(selparent + 1) == '\0'))) {
+		free(selparent);
+		selparent = NULL;
+	}
+#endif /* _WIN32 */
+
+	/* Create a parent gopherspace address if needed. */
+	if (parent != NULL) {
+		/* Duplicate the address while changing to the parent selector. */
+		*parent = gopher_addr_new(addr->host, addr->port, selparent);
+		if (selparent) {
+			free(selparent);
+			selparent = NULL;
+		}
+	}
+
+	return 1;
 }
 
 /**
