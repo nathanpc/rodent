@@ -406,15 +406,15 @@ buildparent:
 		selparent = NULL;
 	}
 #endif /* _WIN32 */
-
-	/* Create a parent gopherspace address if needed. */
-	if (parent != NULL) {
-		/* Duplicate the address while changing to the parent selector. */
+	
+	/* Duplicate the address while changing to the parent selector. */
+	if (parent != NULL)
 		*parent = gopher_addr_new(addr->host, addr->port, selparent);
-		if (selparent) {
-			free(selparent);
-			selparent = NULL;
-		}
+
+	/* Clean things up. */
+	if (selparent) {
+		free(selparent);
+		selparent = NULL;
 	}
 
 	return 1;

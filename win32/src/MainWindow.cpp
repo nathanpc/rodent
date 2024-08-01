@@ -16,7 +16,8 @@
 MainWindow::MainWindow(HINSTANCE hInstance, LPCTSTR szURI) {
 	// Initialize important stuff.
 	this->hInst = hInstance;
-	strInitialURL = (szURI) ? szURI : _T("gopher://gopher.floodgap.com/1/overbite");
+	//strInitialURL = (szURI) ? szURI : _T("gopher://gopher.floodgap.com/1/overbite");
+	strInitialURL = (szURI) ? szURI : _T("gopher://sdf.org:70/");
 
 	// Initialize default values.
 	goInitialDirectory = nullptr;
@@ -75,10 +76,16 @@ MainWindow::~MainWindow() {
 
 	// Free up any resources allocated by the Gopher client implementation.
 	if (goInitialDirectory) {
+		// Free the current directory.
+		if (goDirectory != goInitialDirectory) {
+			delete goDirectory;
+			goDirectory = nullptr;
+		}
+
+		// Free the initial directory.
 		goInitialDirectory->free(RECURSE_BACKWARD | RECURSE_FORWARD);
 		delete goInitialDirectory;
 		goInitialDirectory = nullptr;
-		goDirectory = nullptr;
 	}
 }
 
