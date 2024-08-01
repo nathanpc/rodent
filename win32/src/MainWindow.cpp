@@ -442,6 +442,52 @@ LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
 }
 
 /**
+ * Handles the directory ListView custom draw event.
+ *
+ * @param lvcd Information about the NM_CUSTOMDRAW notification.
+ *
+ * @return Values for the NM_CUSTOMDRAW message about what has changed.
+ */
+LRESULT MainWindow::HandleDirectoryCustomDraw(LPNMLVCUSTOMDRAW lvcd) {
+	switch (lvcd->nmcd.dwDrawStage) {
+	case CDDS_PREPAINT:
+		// Before paint cycle begins, request notifications for each items.
+		return CDRF_NOTIFYITEMDRAW;
+	case CDDS_ITEMPREPAINT:
+		// Before an item gets drawn.
+		return DirectoryItemPrePaint(lvcd);
+	}
+
+	return CDRF_DODEFAULT;
+}
+
+/**
+ * Handles the directory ListView custom draw CDDS_ITEMPREPAINT event for custom
+ * drawing individual items.
+ *
+ * @param lvcd Information about the NM_CUSTOMDRAW notification.
+ *
+ * @return Values for the NM_CUSTOMDRAW message about what has changed.
+ */
+LRESULT MainWindow::DirectoryItemPrePaint(LPNMLVCUSTOMDRAW lvcd) {
+	// Get item to be painted.
+	Gopher::Item item = goDirectory->items()->at(lvcd->nmcd.dwItemSpec);
+
+	switch (item.type()) {
+	case GOPHER_TYPE_INFO:
+		return CDRF_DODEFAULT;
+	case GOPHER_TYPE_ERROR:
+		lvcd->clrText = RGB(255, 0, 0);
+		lvcd->clrTextBk = RGB(255, 255, 255);
+		return CDRF_NEWFONT;
+	default:
+		lvcd->clrText = RGB(0, 0, 255);
+		lvcd->clrTextBk = RGB(255, 255, 255);
+		return CDRF_NEWFONT;
+	}
+}
+
+/**
  * Opens a link referenced in a Gopher entry item.
  *
  * @param goItem Gopher entry item to open its referenced link.

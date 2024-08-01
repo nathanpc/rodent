@@ -52,6 +52,7 @@ private:
 	void SetStatusAddress(LPCTSTR szAddress);
 	void SetStatusMessage(LPCTSTR szMsg);
 	int ItemTypeIconIndex(gopher_type_t type);
+	LRESULT DirectoryItemPrePaint(LPNMLVCUSTOMDRAW lvcd);
 
 	// Download helpers.
 	void OpenShellLink(const Gopher::Item& goItem);
@@ -87,6 +88,7 @@ public:
 	LRESULT HandleItemHover(LPNMHDR nmh);
 	LRESULT HandleItemHotTrack(LPNMLISTVIEW nmlv);
 	LRESULT HandleItemActivate(LPNMITEMACTIVATE nmia);
+	LRESULT HandleDirectoryCustomDraw(LPNMLVCUSTOMDRAW lvcd);
 
 	// Checking for notifications.
 	BOOL IsDirectoryListView(HWND hWnd) const;

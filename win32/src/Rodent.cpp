@@ -321,6 +321,11 @@ LRESULT WndMainCommand(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 LRESULT WndMainNotify(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 	LPNMHDR nmh = (LPNMHDR)lParam;
 	switch (nmh->code) {
+	case NM_CUSTOMDRAW:
+		// Directory ListView custom drawing for links.
+		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
+			return wndMain->HandleDirectoryCustomDraw((LPNMLVCUSTOMDRAW)lParam);
+		break;
 	case LVN_HOTTRACK:
 		// Directory ListView hot tracking.
 		if (wndMain->IsDirectoryListView(nmh->hwndFrom))
