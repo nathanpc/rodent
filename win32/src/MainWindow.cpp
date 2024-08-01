@@ -83,6 +83,16 @@ MainWindow::~MainWindow() {
 }
 
 /**
+ * Navigates to the address specified in the address bar.
+ */
+void MainWindow::BrowseTo() {
+	// Get URL from address bar.
+	LPTSTR szAddress = GetWindowTextAlloc(hwndAddressCombo);
+	BrowseTo(szAddress);
+	free(szAddress);
+}
+
+/**
  * Navigates the browser to a specific gopherspace URL.
  *
  * @param szURL Gopherspace URL to navigate to. Use NULL to get the value from
@@ -91,26 +101,65 @@ MainWindow::~MainWindow() {
 void MainWindow::BrowseTo(LPCTSTR szURL) {
 	gopher_type_t type = GOPHER_TYPE_UNKNOWN;
 	gopher_addr_t *addr = NULL;
-	LPTSTR szAddress = NULL;
 
-	// Get URL from address bar.
-	if (szURL == NULL) {
-		szAddress = GetWindowTextAlloc(hwndAddressCombo);
-		szURL = szAddress;
+	try {
+		// Get gopherspace address structure from URL.
+		addr = Gopher::Address::from_url(szURL, &type);
+	} catch (const std::exception& e) {
+#ifdef UNICODE
+		// Convert the Unicode string to multi-byte.
+		TCHAR *szMessage = win_mbstowcs(e.what());
+		if (szMessage == NULL)
+			throw std::exception("Failed to convert exception to wide string");
+#else
+		const char *szMessage = e.what();
+#endif // UNICODE
+
+		MsgBoxError(this->hWnd, _T("Failed to parse URL"), szMessage);
+
+#ifdef UNICODE
+		// Free the temporary buffer.
+		std::free(szMessage);
+#endif // UNICODE
+
+		UpdateControls();
+		return;
+	}
+
+	// Browse to the address.
+	BrowseTo(addr, type);
+}
+
+/**
+ * Navigates the browser to a Gopher entry item.
+ *
+ * @param goItem Gopher entry item to navigate to.
+ */
+void MainWindow::BrowseTo(const Gopher::Item& goItem) {
+	LPTSTR szAddress = goItem.to_url();
+	BrowseTo(szAddress);
+	free(szAddress);
+	szAddress = NULL;
+}
+
+/**
+ * Navigates the browser using a gopherspace address structure.
+ *
+ * @param addr Internal gopherspace address structure to navigate to. This will
+ *             be owned by the internals of the API, ensure it won't conflict.
+ */
+void MainWindow::BrowseTo(gopher_addr_t *addr, gopher_type_t type) {
+	// If the type is not a directory or unknown (assuming directory) try to open it.
+	if ((type != GOPHER_TYPE_DIR) && (type != GOPHER_TYPE_UNKNOWN)) {
+		MsgBoxError(this->hWnd, _T("Still not implemented"),
+			_T("Navigating directly to files is not yet implemented."));
+		return;
 	}
 
 	// Ensure we don't run into weird race conditions with the directory.
 	ListView_DeleteAllItems(hwndDirectory);
 
 	try {
-		// Get gopherspace address structure from URL.
-		addr = Gopher::Address::from_url(szURL, &type);
-		if (szAddress) {
-			free(szAddress);
-			szAddress = NULL;
-			szURL = NULL;
-		}
-
 		if (goInitialDirectory != nullptr) {
 			// Get directory from requested address.
 			Gopher::Directory *dirOld = goDirectory;
@@ -132,7 +181,7 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 		const char *szMessage = e.what();
 #endif // UNICODE
 
-		MsgBoxError(this->hWnd, _T("Failed to browse to URL"), szMessage);
+		MsgBoxError(this->hWnd, _T("Failed to browse to address"), szMessage);
 
 #ifdef UNICODE
 		// Free the temporary buffer.
@@ -145,18 +194,6 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 
 	// Update the interface to show our fetched directory.
 	LoadDirectory();
-}
-
-/**
- * Navigates the browser to a Gopher entry item.
- *
- * @param goItem Gopher entry item to navigate to.
- */
-void MainWindow::BrowseTo(const Gopher::Item& goItem) {
-	LPTSTR szAddress = goItem.to_url();
-	BrowseTo(szAddress);
-	free(szAddress);
-	szAddress = NULL;
 }
 
 /**
@@ -197,6 +234,22 @@ void MainWindow::GoNext() {
 
 	// Update everything.
 	LoadDirectory();
+}
+
+/**
+ * Navigates to the parent of the current directory.
+ */
+void MainWindow::GoToParent() {
+	// Get the directory and check if it's even possible to move to a parent.
+	gopher_addr_t *addr = goDirectory->parent();
+	if (addr == NULL) {
+		MsgBoxInfo(this->hWnd, _T("No parent available"),
+			_T("You are already at the top-level of the server."));
+		return;
+	}
+
+	// Navigate to the parent.
+	BrowseTo(addr, GOPHER_TYPE_DIR);
 }
 
 /**
@@ -545,6 +598,8 @@ void MainWindow::UpdateControls() {
 		(LPARAM)(goDirectory && goDirectory->has_prev()));
 	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_NEXT,
 		(LPARAM)(goDirectory && goDirectory->has_next()));
+	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_PARENT,
+		(LPARAM)(goDirectory && goDirectory->has_parent()));
 }
 
 /**

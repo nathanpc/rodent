@@ -73,10 +73,13 @@ public:
 	void UpdateControls();
 
 	// Browser navigation.
+	void BrowseTo();
 	void BrowseTo(LPCTSTR szURL);
 	void BrowseTo(const Gopher::Item& goItem);
+	void BrowseTo(gopher_addr_t *addr, gopher_type_t type);
 	void GoBack();
 	void GoNext();
+	void GoToParent();
 
 	// Notification handling.
 	LRESULT HandleItemHover(LPNMHDR nmh);

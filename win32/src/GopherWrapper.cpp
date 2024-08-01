@@ -229,6 +229,79 @@ void Address::free() {
 }
 
 /**
+ * Checks if the gopherspace address structure has a parent selector.
+ *
+ * @param addr Internal gopherspace address structure to check.
+ *
+ * @return TRUE if there's a parent to the selector. FALSE if it's top-level.
+ *
+ * @see parent
+ */
+bool Address::has_parent(const gopher_addr_t *addr) {
+	int ret = gopher_addr_up(NULL, addr);
+	if (ret == -1) {
+		// Build up the exception message and throw exception.
+		std::string msg("Failed to check for parent selector: ");
+		msg += strerror(ret);
+		throw std::exception(msg.c_str());
+	}
+
+	return ret > 0;
+}
+
+/**
+ * Checks if the address has a parent selector.
+ *
+ * @return TRUE if there's a parent to the selector. FALSE if it's top-level.
+ *
+ * @see parent
+ */
+bool Address::has_parent() const {
+	return Address::has_parent(this->m_addr);
+}
+
+/**
+ * Gets the parent selector of a gopherspace address structure.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @param addr Internal gopherspace address structure.
+ *
+ * @return Gopherspace address structure pointing to the parent selector or NULL
+ *         if one wasn't found.
+ *
+ * @see has_parent
+ */
+gopher_addr_t *Address::parent(const gopher_addr_t *addr) {
+	gopher_addr_t *parent;
+
+	// Try to get a parent selector.
+	int ret = gopher_addr_up(&parent, addr);
+	if (ret == -1) {
+		// Build up the exception message and throw exception.
+		std::string msg("Failed to get parent selector: ");
+		msg += strerror(ret);
+		throw std::exception(msg.c_str());
+	}
+
+	return parent;
+}
+
+/**
+ * Gets the parent selector gopherspace address structure of the object.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @return Gopherspace address structure pointing to the parent selector or NULL
+ *         if one wasn't found.
+ *
+ * @see has_parent
+ */
+gopher_addr_t *Address::parent() const {
+	return Address::parent(this->m_addr);
+}
+
+/**
  * Check if there's an connection with the Gopher server.
  *
  * @return Are we connected to a Gopher server?
@@ -590,6 +663,31 @@ bool Directory::has_prev() const {
  */
 bool Directory::has_next() const {
 	return this->m_dir->next != NULL;
+}
+
+/**
+ * Checks if the directory has a parent.
+ *
+ * @return TRUE if the directory has a parent, FALSE otherwise.
+ *
+ * @see Address::has_parent
+ */
+bool Directory::has_parent() const {
+	return Address::has_parent(this->m_dir->addr);
+}
+
+/**
+ * Gets parent of the directory.
+ *
+ * @warning This function dinamically allocates memory.
+ *
+ * @return Gopherspace address structure pointing to the parent selector or NULL
+ *         if one wasn't found.
+ *
+ * @see Address::has_parent
+ */
+gopher_addr_t *Directory::parent() const {
+	return Address::parent(this->m_dir->addr);
 }
 
 /**

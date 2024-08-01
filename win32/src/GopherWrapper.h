@@ -49,6 +49,11 @@ public:
 	void invalidate();
 	void free();
 
+	static bool has_parent(const gopher_addr_t *addr);
+	bool has_parent() const;
+	static gopher_addr_t *parent(const gopher_addr_t *addr);
+	gopher_addr_t *parent() const;
+
 	bool connected() const;
 	bool read_only() const;
 	const gopher_addr_t *c_addr() const;
@@ -109,6 +114,9 @@ public:
 	Directory *next() const;
 	bool has_prev() const;
 	bool has_next() const;
+	
+	bool has_parent() const;
+	gopher_addr_t *parent() const;
 
 	const std::vector<Item> *items();
 

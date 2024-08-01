@@ -297,8 +297,11 @@ LRESULT WndMainCommand(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 		case IDM_NEXT:
 			wndMain->GoNext();
 			return 0;
+		case IDM_PARENT:
+			wndMain->GoToParent();
+			return 0;
 		case IDM_GO:
-			wndMain->BrowseTo(NULL);
+			wndMain->BrowseTo();
 			return 0;
 	}
 
