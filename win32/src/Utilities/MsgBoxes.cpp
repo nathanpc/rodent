@@ -131,10 +131,12 @@ failure:
 #endif // UNICODE
 
 	// Finally display the error message box!
-	MsgBoxError(hwndParent, szTitle, szMessage);
+	int nRet = MsgBoxError(hwndParent, szTitle, szMessage);
 
 #ifdef UNICODE
 	// Free the temporary buffer.
 	free(szMessage);
 #endif // UNICODE
+
+	return nRet;
 }
