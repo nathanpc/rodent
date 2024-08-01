@@ -887,12 +887,13 @@ HWND MainWindow::CreateDirectoryView() {
 
 	// Create ListView window.
 	hwndDirectory = CreateWindow(WC_LISTVIEW, _T(""), WS_CHILD | LVS_REPORT |
-		LVS_NOSORTHEADER, 0, rc.bottom, rc.right, 200, this->hWnd,
-		(HMENU)IDC_LSTDIRECTORY, hInst, NULL);
+		LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER, 0, rc.bottom, rc.right, 200,
+		this->hWnd, (HMENU)IDC_LSTDIRECTORY, hInst, NULL);
 	if (hwndDirectory == NULL)
 		return NULL;
 	ListView_SetExtendedListViewStyle(hwndDirectory, LVS_EX_FULLROWSELECT |
 		LVS_EX_TRACKSELECT | LVS_EX_ONECLICKACTIVATE | LVS_EX_UNDERLINEHOT);
+
 	ListView_SetHoverTime(hwndDirectory, 10);
 
 	// Ensure we use a monospace font for that nice ASCII art.
