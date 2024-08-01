@@ -129,7 +129,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\Utilities\DialogWindow.cpp" />
-    <ClCompile Include="..\..\src\Utilities\MsgBoxes.c" />
+    <ClCompile Include="..\..\src\Utilities\MsgBoxes.cpp" />
     <ClCompile Include="..\..\src\Utilities\WindowUtilities.c" />
   </ItemGroup>
   <ItemGroup>

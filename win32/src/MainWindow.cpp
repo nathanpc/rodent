@@ -106,22 +106,7 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 		// Get gopherspace address structure from URL.
 		addr = Gopher::Address::from_url(szURL, &type);
 	} catch (const std::exception& e) {
-#ifdef UNICODE
-		// Convert the Unicode string to multi-byte.
-		TCHAR *szMessage = win_mbstowcs(e.what());
-		if (szMessage == NULL)
-			throw std::exception("Failed to convert exception to wide string");
-#else
-		const char *szMessage = e.what();
-#endif // UNICODE
-
-		MsgBoxError(this->hWnd, _T("Failed to parse URL"), szMessage);
-
-#ifdef UNICODE
-		// Free the temporary buffer.
-		std::free(szMessage);
-#endif // UNICODE
-
+		MsgBoxException(this->hWnd, e, _T("Failed to parse URL"));
 		UpdateControls();
 		return;
 	}
@@ -172,22 +157,7 @@ void MainWindow::BrowseTo(gopher_addr_t *addr, gopher_type_t type) {
 			goDirectory = goInitialDirectory;
 		}
 	} catch (const std::exception& e) {
-#ifdef UNICODE
-		// Convert the Unicode string to multi-byte.
-		TCHAR *szMessage = win_mbstowcs(e.what());
-		if (szMessage == NULL)
-			throw std::exception("Failed to convert exception to wide string");
-#else
-		const char *szMessage = e.what();
-#endif // UNICODE
-
-		MsgBoxError(this->hWnd, _T("Failed to browse to address"), szMessage);
-
-#ifdef UNICODE
-		// Free the temporary buffer.
-		std::free(szMessage);
-#endif // UNICODE
-
+		MsgBoxException(this->hWnd, e, _T("Failed to browse to address"));
 		UpdateControls();
 		return;
 	}
@@ -512,22 +482,7 @@ Gopher::FileDownload *MainWindow::DownloadFile(const Gopher::Item& goItem) {
 	try {
 		fdl->download(goItem.c_item()->addr, goItem.type(), nullptr);
 	} catch (const std::exception& e) {
-#ifdef UNICODE
-		// Convert the Unicode string to multi-byte.
-		TCHAR *szMessage = win_mbstowcs(e.what());
-		if (szMessage == NULL)
-			throw std::exception("Failed to convert exception to wide string");
-#else
-		const char *szMessage = e.what();
-#endif // UNICODE
-
-		MsgBoxError(this->hWnd, _T("Failed to download file"), szMessage);
-
-#ifdef UNICODE
-		// Free the temporary buffer.
-		std::free(szMessage);
-#endif // UNICODE
-
+		MsgBoxException(this->hWnd, e, _T("Failed to download file"));
 		delete fdl;
 		return nullptr;
 	}

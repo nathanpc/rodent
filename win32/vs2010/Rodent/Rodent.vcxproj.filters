@@ -118,9 +118,6 @@
     <ClCompile Include="..\..\src\Utilities\DialogWindow.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\Utilities\MsgBoxes.c">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\Utilities\WindowUtilities.c">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -132,6 +129,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\MainWindow.cpp">
       <Filter>Windows and Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Utilities\MsgBoxes.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

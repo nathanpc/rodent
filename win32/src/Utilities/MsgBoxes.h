@@ -13,11 +13,8 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#ifdef  __cplusplus
-extern "C" {
-#endif  // __cplusplus
-
 #include <windows.h>
+#include <exception>
 
 // Generic message box.
 int MsgBox(HWND hwndParent, UINT uType, LPCTSTR szTitle, LPCTSTR szText);
@@ -27,9 +24,7 @@ int MsgBoxInfo(HWND hwndParent, LPCTSTR szTitle, LPCTSTR szText);
 int MsgBoxWarning(HWND hwndParent, LPCTSTR szTitle, LPCTSTR szText);
 int MsgBoxError(HWND hwndParent, LPCTSTR szTitle, LPCTSTR szText);
 int MsgBoxLastError(HWND hwndParent);
-
-#ifdef  __cplusplus
-}
-#endif  // __cplusplus
+int MsgBoxException(HWND hwndParent, const std::exception& exc,
+					LPCTSTR szTitle);
 
 #endif // _WINCOMMON_MSGBOXES_H
