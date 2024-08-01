@@ -24,6 +24,7 @@ private:
 
 	// Image lists.
 	HIMAGELIST himlToolbar;
+	HIMAGELIST himlBrowser;
 
 	// Toolbars and toolbar controls.
 	HWND hwndToolbar;
@@ -50,6 +51,7 @@ private:
 	void AddDirectoryEntry(size_t nIndex);
 	void SetStatusAddress(LPCTSTR szAddress);
 	void SetStatusMessage(LPCTSTR szMsg);
+	int ItemTypeIconIndex(gopher_type_t type);
 
 	// Download helpers.
 	void OpenShellLink(const Gopher::Item& goItem);

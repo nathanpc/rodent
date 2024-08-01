@@ -16,14 +16,14 @@
 MainWindow::MainWindow(HINSTANCE hInstance, LPCTSTR szURI) {
 	// Initialize important stuff.
 	this->hInst = hInstance;
-	//strInitialURL = (szURI) ? szURI : _T("gopher://gopher.floodgap.com/1/overbite");
-	strInitialURL = (szURI) ? szURI : _T("gopher://sdf.org:70/");
+	strInitialURL = (szURI) ? szURI : _T("gopher://gopher.floodgap.com/1/overbite");
 
 	// Initialize default values.
 	goInitialDirectory = nullptr;
 	goDirectory = nullptr;
 	this->hWnd = NULL;
 	himlToolbar = NULL;
+	himlBrowser = NULL;
 	hwndToolbar = NULL;
 	hwndAddressCombo = NULL;
 	hwndAddressBar = NULL;
@@ -62,6 +62,10 @@ MainWindow::~MainWindow() {
 	if (hwndDirectory) {
 		DestroyWindow(hwndDirectory);
 		hwndDirectory = NULL;
+	}
+	if (himlBrowser) {
+		ImageList_Destroy(himlBrowser);
+		himlBrowser = NULL;
 	}
 
 	// Destroy status bar.
@@ -276,11 +280,11 @@ void MainWindow::AddDirectoryEntry(size_t nIndex) {
 	LVITEM lvi;
 
 	// Populate ListView item structure.
-	lvi.mask = LVIF_TEXT | LVIF_PARAM | LVIF_STATE;
+	lvi.mask = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM | LVIF_STATE;
 	lvi.state = 0; 
 	lvi.stateMask = 0; 
    	lvi.iItem = nIndex;
-	//lvi.iImage = index;
+	lvi.iImage = ItemTypeIconIndex(item.type());
 	lvi.iSubItem = 0;
 	lvi.lParam = (LPARAM)&goDirectory->items()->at(nIndex);
 	lvi.pszText = item.label();
@@ -664,28 +668,32 @@ HWND MainWindow::CreateToolbar(LPSIZE lpSize) {
 		(LPARAM)TBSTYLE_EX_MIXEDBUTTONS);
 
 	// Create the Toolbar image list and assign it to the toolbar.
-	const int imlID = 0;
 	const int iImages = 6;
 	const int bitmapSize = 16;
 	himlToolbar = ImageList_Create(bitmapSize, bitmapSize,
 		ILC_MASK | ILC_COLOR32, iImages, 0);
-	SendMessage(hwndToolbar, TB_SETIMAGELIST, (WPARAM)imlID,
-		(LPARAM)himlToolbar);
+	SendMessage(hwndToolbar, TB_SETIMAGELIST, (WPARAM)0, (LPARAM)himlToolbar);
 
 	// Load Toolbar button images into image list.
 	HICON hIcon;
 	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_LEFT));
 	ImageList_AddIcon(himlToolbar, hIcon);
+	DestroyIcon(hIcon);
 	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_RIGHT));
 	ImageList_AddIcon(himlToolbar, hIcon);
+	DestroyIcon(hIcon);
 	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_UP));
 	ImageList_AddIcon(himlToolbar, hIcon);
+	DestroyIcon(hIcon);
 	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_REFRESH));
 	ImageList_AddIcon(himlToolbar, hIcon);
+	DestroyIcon(hIcon);
 	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_STOP));
 	ImageList_AddIcon(himlToolbar, hIcon);
+	DestroyIcon(hIcon);
 	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_PLAY));
 	ImageList_AddIcon(himlToolbar, hIcon);
+	DestroyIcon(hIcon);
 
 	// Setup Toolbar buttons.
 	const int numButtons = 4;
@@ -894,18 +902,67 @@ HWND MainWindow::CreateDirectoryView() {
 
 	// Create ListView window.
 	hwndDirectory = CreateWindow(WC_LISTVIEW, _T(""), WS_CHILD | LVS_REPORT |
-		LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER, 0, rc.bottom, rc.right, 200,
-		this->hWnd, (HMENU)IDC_LSTDIRECTORY, hInst, NULL);
+		LVS_NOSORTHEADER | LVS_NOCOLUMNHEADER | LVS_SHAREIMAGELISTS, 0,
+		rc.bottom, rc.right, 200, this->hWnd, (HMENU)IDC_LSTDIRECTORY, hInst,
+		NULL);
 	if (hwndDirectory == NULL)
 		return NULL;
 	ListView_SetExtendedListViewStyle(hwndDirectory, LVS_EX_FULLROWSELECT |
 		LVS_EX_TRACKSELECT | LVS_EX_ONECLICKACTIVATE | LVS_EX_UNDERLINEHOT);
-
 	ListView_SetHoverTime(hwndDirectory, 10);
 
 	// Ensure we use a monospace font for that nice ASCII art.
 	HFONT hFont = (HFONT)GetStockObject(ANSI_FIXED_FONT);
 	SendMessage(hwndDirectory, WM_SETFONT, (WPARAM)hFont, (LPARAM)NULL);
+
+	// Create the directory image list and assign it to the ListView.
+	const int iImages = 13;
+	const int bitmapSize = 16;
+	himlBrowser = ImageList_Create(bitmapSize, bitmapSize,
+		ILC_MASK | ILC_COLOR32, iImages, 0);
+	ListView_SetImageList(hwndDirectory, himlBrowser, LVSIL_SMALL);
+
+	// Load Toolbar button images into image list.
+	HICON hIcon;
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_BLANK));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_UNKNOWN));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_ERROR));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_FOLDER));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_TEXT));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_BIN));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_SEARCH));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_IMAGE));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_WEB));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_TELNET));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_AUDIO));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_VIDEO));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
+	hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_TYPE_DOC));
+	ImageList_AddIcon(himlBrowser, hIcon);
+	DestroyIcon(hIcon);
 
 	// Setup common column properties.
 	int iCol = 0;
@@ -923,6 +980,67 @@ HWND MainWindow::CreateDirectoryView() {
 	ShowWindow(hwndDirectory, SW_SHOW);
 
 	return hwndDirectory;
+}
+
+/**
+ * Gets an icon index from the entry type image list.
+ *
+ * @param type Gopher entry item type.
+ *
+ * @return Icon index for the associated entry type in the directory image list.
+ */
+int MainWindow::ItemTypeIconIndex(gopher_type_t type) {
+	switch (type) {
+	case GOPHER_TYPE_INFO:
+		// Info (should be blank).
+		return 0;
+	case GOPHER_TYPE_ERROR:
+		// Server errors.
+		return 2;
+	case GOPHER_TYPE_DIR:
+		// Directory links.
+		return 3;
+	case GOPHER_TYPE_TEXT:
+	case GOPHER_TYPE_XML:
+		// Text and XML.
+		return 4;
+	case GOPHER_TYPE_BINHEX:
+	case GOPHER_TYPE_UNIX:
+	case GOPHER_TYPE_DOS:
+	case GOPHER_TYPE_BINARY:
+		// Binary and executables.
+		return 5;
+	case GOPHER_TYPE_SEARCH:
+		// Search links.
+		return 6;
+	case GOPHER_TYPE_GIF:
+	case GOPHER_TYPE_IMAGE:
+	case GOPHER_TYPE_BITMAP:
+	case GOPHER_TYPE_PNG:
+		// Images and pictures.
+		return 7;
+	case GOPHER_TYPE_HTML:
+		// Web link.
+		return 8;
+	case GOPHER_TYPE_TELNET:
+	case GOPHER_TYPE_TN3270:
+		// Telnet links.
+		return 9;
+	case GOPHER_TYPE_AUDIO:
+	case GOPHER_TYPE_WAV:
+		// Audio and music.
+		return 10;
+	case GOPHER_TYPE_MOVIE:
+		// Video file.
+		return 11;
+	case GOPHER_TYPE_DOC:
+	case GOPHER_TYPE_PDF:
+		// Document files.
+		return 12;
+	default:
+		// Unknown file types.
+		return 1;
+	}
 }
 
 /**

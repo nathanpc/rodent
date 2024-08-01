@@ -66,6 +66,45 @@
     <None Include="..\..\icons\arrow_up_blue.ico">
       <Filter>Resource Files\Icons</Filter>
     </None>
+    <None Include="..\..\icons\document_certificate.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\document_text.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\earth.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\error.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\folder.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\laptop.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\loudspeaker.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\movie.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\photo_scenery.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\unknown.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\view.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\window_gear.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
+    <None Include="..\..\icons\blank.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h">
