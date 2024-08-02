@@ -245,6 +245,8 @@ LRESULT CALLBACK MainWindowProc(HWND hWnd, UINT wMsg, WPARAM wParam,
 			return WndMainNotify(hWnd, wMsg, wParam, lParam);
 		case WM_SIZE:
 			return WndMainSize(hWnd, wMsg, wParam, lParam);
+		case WM_TIMER:
+			return WndMainTimer(hWnd, wMsg, wParam, lParam);
 		case WM_CLOSE:
 			return WndMainClose(hWnd, wMsg, wParam, lParam);
 		case WM_DESTROY:
@@ -374,6 +376,25 @@ LRESULT WndMainSize(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
 
 	// Resize child windows.
 	wndMain->ResizeWindows(hWnd);
+
+	return DefWindowProc(hWnd, wMsg, wParam, lParam);
+}
+
+/**
+ * Process the WM_TIMER message for the window.
+ *
+ * @param hWnd   Window handler.
+ * @param wMsg   Message type.
+ * @param wParam Specifies the type of resizing requested.
+ * @param lParam New width (LOWORD) and height (HIWORD) of the client area.
+ *
+ * @return 0 if everything worked.
+ */
+LRESULT WndMainTimer(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam) {
+	switch (wParam) {
+	case IDT_LOADING:
+		return wndMain->HandleLoadingTimer(1);
+	}
 
 	return DefWindowProc(hWnd, wMsg, wParam, lParam);
 }

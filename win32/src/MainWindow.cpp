@@ -7,6 +7,15 @@
 
 #include "MainWindow.h"
 
+#include <process.h>
+
+// Define the homehole of the application.
+#define DEFAULT_HOMEHOLE _T("gopher://gopher.floodgap.com/1/overbite")
+
+// Define the loading timer interval (ms) and associated constants.
+#define TIMER_INT_LOADING 150
+#define NUM_LOADING_DOTS  5
+
 /**
  * Constructs the main window object.
  *
@@ -16,12 +25,13 @@
 MainWindow::MainWindow(HINSTANCE hInstance, LPCTSTR szURI) {
 	// Initialize important stuff.
 	this->hInst = hInstance;
-	strInitialURL = (szURI) ? szURI : _T("gopher://gopher.floodgap.com/1/overbite");
+	strInitialURL = (szURI) ? szURI : DEFAULT_HOMEHOLE;
 
 	// Initialize default values.
 	goInitialDirectory = nullptr;
 	goDirectory = nullptr;
 	this->hWnd = NULL;
+	bFetching = false;
 	himlToolbar = NULL;
 	himlBrowser = NULL;
 	hwndToolbar = NULL;
@@ -73,6 +83,9 @@ MainWindow::~MainWindow() {
 		DestroyWindow(hwndStatusBar);
 		hwndStatusBar = NULL;
 	}
+
+	// Free the loading animation resources.
+	HandleLoadingTimer(-1);
 
 	// Destroy the main window.
 	DestroyWindow(this->hWnd);
@@ -155,26 +168,56 @@ void MainWindow::BrowseTo(gopher_addr_t *addr, gopher_type_t type) {
 	// Ensure we don't run into weird race conditions with the directory.
 	ListView_DeleteAllItems(hwndDirectory);
 
+	// Fetch directory on a separate thread.
+	DirectoryFetchArgs *dfa = (DirectoryFetchArgs *)malloc(
+		sizeof(DirectoryFetchArgs));
+	dfa->lpThis = this;
+	dfa->addr = addr;
+	dfa->type = type;
+	HANDLE hFetchThread = (HANDLE)_beginthread(
+		MainWindow::FetchDirectoryThreadProc, 0, (void *)dfa);
+}
+
+/**
+ * The thread procedure for fetching a directory.
+ *
+ * @param lpvArgs Pointer to the DirectoryFetchArgs structure passed to the
+ *                _beginthread method. WARNING: Will be free'd by this method.
+ */
+void MainWindow::FetchDirectoryThreadProc(void *lpvArgs) {
+	DirectoryFetchArgs *lpArgs = static_cast<DirectoryFetchArgs *>(lpvArgs);
+	MainWindow *lpThis = lpArgs->lpThis;
+
 	try {
-		if (goInitialDirectory != nullptr) {
+		// Ensure we enter change the UI into fetching more.
+		lpThis->SetFetching(true, true);
+
+		if (lpThis->goInitialDirectory != nullptr) {
 			// Get directory from requested address.
-			Gopher::Directory *dirOld = goDirectory;
-			goDirectory = dirOld->push(addr);
-			if (dirOld != goInitialDirectory)
+			Gopher::Directory *dirOld = lpThis->goDirectory;
+			lpThis->goDirectory = dirOld->push(lpArgs->addr);
+			if (dirOld != lpThis->goInitialDirectory)
 				delete dirOld;
 		} else {
 			// Ensure we have an initial directory to start off.
-			goInitialDirectory = new Gopher::Directory(addr);
-			goDirectory = goInitialDirectory;
+			lpThis->goInitialDirectory = new Gopher::Directory(lpArgs->addr);
+			lpThis->goDirectory = lpThis->goInitialDirectory;
 		}
+
+		// Update the interface to show our fetched directory.
+		lpThis->SetFetching(false, false);
+		lpThis->LoadDirectory();
 	} catch (const std::exception& e) {
-		MsgBoxException(this->hWnd, e, _T("Failed to browse to address"));
-		UpdateControls();
-		return;
+		MsgBoxException(lpThis->hWnd, e, _T("Failed to browse to address"));
+		lpThis->SetFetching(false, false);
+		lpThis->UpdateControls();
 	}
 
-	// Update the interface to show our fetched directory.
-	LoadDirectory();
+	// Free resources and exit the thread.
+	free(lpvArgs);
+	lpvArgs = NULL;
+	lpArgs = NULL;
+	_endthread();
 }
 
 /**
@@ -488,6 +531,40 @@ LRESULT MainWindow::DirectoryItemPrePaint(LPNMLVCUSTOMDRAW lvcd) {
 }
 
 /**
+ * Handles the loading timer interval tick notification.
+ *
+ * @param iOper 1 plays the animation. 0 resets the animation. -1 frees internal
+ *              resources.
+ *
+ * @return Must be 0 if we handled the message.
+ */
+LRESULT MainWindow::HandleLoadingTimer(int iOper) {
+	static tstring *strLoading = new tstring(_T("Loading"));
+
+	// Should we free our resources?
+	if (iOper == -1) {
+		delete strLoading;
+		return 0;
+	}
+
+	// Are we simply reseting the animation?
+	if (iOper == 0) {
+		strLoading->assign(_T("Loading"));
+		return 0;
+	}
+
+	// Do a little loading text dots animation.
+	SetStatusMessage(strLoading->c_str());
+	if (strLoading->length() < (7 + NUM_LOADING_DOTS)) {
+		strLoading->append(_T("."));
+	} else {
+		strLoading->assign(_T("Loading"));
+	}
+
+	return 0;
+}
+
+/**
  * Opens a link referenced in a Gopher entry item.
  *
  * @param goItem Gopher entry item to open its referenced link.
@@ -602,16 +679,45 @@ void MainWindow::DownloadOpenDefault(const Gopher::Item& goItem) {
 }
 
 /**
+ * Sets the fetching state of the window.
+ *
+ * @param bFetching Are we currently fetching something?
+ * @param bUpdate   Should we update the UI immediately to reflect the change?
+ */
+void MainWindow::SetFetching(bool bFetching, bool bUpdate) {
+	// Set the local state flag and toggle the animation timer.
+	this->bFetching = bFetching;
+	if (bFetching) {
+		SetTimer(this->hWnd, IDT_LOADING, TIMER_INT_LOADING, NULL);
+	} else {
+		KillTimer(this->hWnd, IDT_LOADING);
+		HandleLoadingTimer(0);
+	}
+
+	// Should we update the UI?
+	if (bUpdate)
+		UpdateControls();
+}
+
+/**
  * Updates the state of controls related to the browser to reflect changes in
  * internal objects.
  */
 void MainWindow::UpdateControls() {
+	// Navigation controls.
 	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_BACK,
-		(LPARAM)(goDirectory && goDirectory->has_prev()));
+		(LPARAM)(!bFetching && goDirectory && goDirectory->has_prev()));
 	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_NEXT,
-		(LPARAM)(goDirectory && goDirectory->has_next()));
+		(LPARAM)(!bFetching && goDirectory && goDirectory->has_next()));
 	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_PARENT,
-		(LPARAM)(goDirectory && goDirectory->has_parent()));
+		(LPARAM)(!bFetching && goDirectory && goDirectory->has_parent()));
+
+	// Fetching controls.
+	EnableWindow(hwndAddressCombo, !bFetching);
+	SendMessage(hwndAddressBar, TB_ENABLEBUTTON, (WPARAM)IDM_GO,
+		(LPARAM)!bFetching);
+	SendMessage(hwndToolbar, TB_ENABLEBUTTON, (WPARAM)IDM_REFRESH,
+		(LPARAM)!bFetching);
 }
 
 /**

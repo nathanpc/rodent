@@ -30,4 +30,8 @@
 #define IDC_RBMAIN                      (IDC_BASE + 5)
 #define IDC_STATUSBAR                   (IDC_BASE + 6)
 
+// Timers
+#define IDT_BASE                        1200
+#define IDT_LOADING                     (IDT_BASE + 1)
+
 #endif // _RODENT_SHARED_RESOURCES_H

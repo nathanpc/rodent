@@ -21,6 +21,7 @@ private:
 	Gopher::Directory *goInitialDirectory;
 	Gopher::Directory *goDirectory;
 	tstring strInitialURL;
+	bool bFetching;
 
 	// Image lists.
 	HIMAGELIST himlToolbar;
@@ -61,6 +62,16 @@ private:
 	void DownloadImage(const Gopher::Item& goItem);
 	void DownloadOpenDefault(const Gopher::Item& goItem);
 
+	// Parallel computing.
+	static void FetchDirectoryThreadProc(void *lpArgs);
+
+	// Parallel computing struct helpers.
+	typedef struct {
+		MainWindow *lpThis;
+		gopher_addr_t *addr;
+		gopher_type_t type;
+	} DirectoryFetchArgs;
+
 public:
 	// Global handles.
 	HINSTANCE hInst;
@@ -74,6 +85,7 @@ public:
 	BOOL SetupControls(HWND hWnd);
 	BOOL ResizeWindows(HWND hwndParent);
 	void UpdateControls();
+	void SetFetching(bool bFetching, bool bUpdate);
 
 	// Browser navigation.
 	void BrowseTo();
@@ -89,6 +101,7 @@ public:
 	LRESULT HandleItemHotTrack(LPNMLISTVIEW nmlv);
 	LRESULT HandleItemActivate(LPNMITEMACTIVATE nmia);
 	LRESULT HandleDirectoryCustomDraw(LPNMLVCUSTOMDRAW lvcd);
+	LRESULT HandleLoadingTimer(int iOper);
 
 	// Checking for notifications.
 	BOOL IsDirectoryListView(HWND hWnd) const;
