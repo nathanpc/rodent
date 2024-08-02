@@ -9,6 +9,8 @@
 
 #include <process.h>
 
+#include "DownloadDialog.h"
+
 // Define the homehole of the application.
 #define DEFAULT_HOMEHOLE _T("gopher://gopher.floodgap.com/1/overbite")
 
@@ -160,6 +162,7 @@ void MainWindow::BrowseTo(const Gopher::Item& goItem) {
 void MainWindow::BrowseTo(gopher_addr_t *addr, gopher_type_t type) {
 	// If the type is not a directory or unknown (assuming directory) try to open it.
 	if ((type != GOPHER_TYPE_DIR) && (type != GOPHER_TYPE_UNKNOWN)) {
+		// TODO: Implement downloading files from URLs.
 		MsgBoxError(this->hWnd, _T("Still not implemented"),
 			_T("Navigating directly to files is not yet implemented."));
 		return;
@@ -440,9 +443,7 @@ LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
 	case GOPHER_TYPE_DOS:
 	case GOPHER_TYPE_BINARY:
 		// Handle binary and "binary" links.
-		// TODO: Download to downloads folder.
-		MsgBoxError(this->hWnd, _T("Not yet implemented"),
-			_T("Downloading binaries hasn't been implemented yet."));
+		DownloadFile(item, false);
 		break;
 	case GOPHER_TYPE_SEARCH:
 		// Handle search links.
@@ -466,8 +467,8 @@ LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
 	case GOPHER_TYPE_WAV:
 	case GOPHER_TYPE_DOC:
 	case GOPHER_TYPE_PDF:
-		// Handle binary files with auto open.
-		DownloadOpenDefault(item);
+		// Handle multimedia files.
+		DownloadFile(item, false);
 		break;
 	case GOPHER_TYPE_HTML:
 		// Handle HTTP requests using a proper browser.
@@ -475,6 +476,8 @@ LRESULT MainWindow::HandleItemActivate(LPNMITEMACTIVATE nmia) {
 		break;
 	default:
 		// Unknown file types.
+		// TODO: Warn the user about unknown file and ask if they wish to
+		//       download it.
 		MsgBoxError(this->hWnd, _T("Unknown entry type"),
 			_T("Unable to open an entry which the type is unknown to the ")
 			_T("application. Please contact the developer."));
@@ -607,21 +610,14 @@ void MainWindow::OpenShellLink(const Gopher::Item& goItem) {
  * Downloads a file related to an item.
  *
  * @param goItem Gopher entry item to download.
- *
- * @return Downloaded file object.
+ * @param bOpen  Open the downloaded file automatically? Will be download to
+ *               temporary folder if TRUE.
  */
-Gopher::FileDownload *MainWindow::DownloadFile(const Gopher::Item& goItem) {
-	Gopher::FileDownload *fdl = new Gopher::FileDownload();
-
-	try {
-		fdl->download(goItem.c_item()->addr, goItem.type(), nullptr);
-	} catch (const std::exception& e) {
-		MsgBoxException(this->hWnd, e, _T("Failed to download file"));
-		delete fdl;
-		return nullptr;
-	}
-
-	return fdl;
+void MainWindow::DownloadFile(const Gopher::Item& goItem, bool bOpen) {
+	// Download the file.
+	DownloadDialog *dlg = new DownloadDialog(this->hInst, this->hWnd);
+	dlg->EnableSelfDisposal();
+	dlg->Download(goItem, bOpen);
 }
 
 /**
@@ -630,15 +626,11 @@ Gopher::FileDownload *MainWindow::DownloadFile(const Gopher::Item& goItem) {
  * @param goItem Gopher entry item to download.
  */
 void MainWindow::DownloadTextFile(const Gopher::Item& goItem) {
-	// Download the file.
-	Gopher::FileDownload *fdl = DownloadFile(goItem);
-	if (fdl == nullptr)
-		return;
-
-	// Open the file.
-	ShellExecute(this->hWnd, _T("open"), _T("notepad.exe"), fdl->path(), NULL,
-		SW_NORMAL);
-	delete fdl;
+	// Download the file and open it automatically.
+	DownloadDialog *dlg = new DownloadDialog(this->hInst, this->hWnd);
+	dlg->EnableSelfDisposal();
+	dlg->SetOpenProgram(_T("notepad.exe"));
+	dlg->Download(goItem, true);
 }
 
 /**
@@ -647,35 +639,7 @@ void MainWindow::DownloadTextFile(const Gopher::Item& goItem) {
  * @param goItem Gopher entry item to download.
  */
 void MainWindow::DownloadImage(const Gopher::Item& goItem) {
-	DownloadOpenDefault(goItem);
-}
-
-/**
- * Downloads a file and automatically open it with the default application.
- *
- * @param goItem Gopher entry item to download.
- */
-void MainWindow::DownloadOpenDefault(const Gopher::Item& goItem) {
-	// Download the file.
-	Gopher::FileDownload *fdl = DownloadFile(goItem);
-	if (fdl == nullptr)
-		return;
-
-	// Open the file.
-	int ret = (int)ShellExecute(this->hWnd, _T("open"), fdl->path(), NULL,
-		NULL, SW_NORMAL);
-	if (ret <= 32) {
-		// Looks like we were unable to open the file. Display a picker dialog.
-		// TODO: Use the "openas" verb or SHOpenWithDialog on Windows Vista and above.
-		//       https://stackoverflow.com/questions/6364879
-		tstring strParams = _T("Shell32,OpenAs_RunDLL ");
-		strParams += fdl->path();
-		ShellExecute(this->hWnd, _T("open"), _T("RUNDLL32"), strParams.c_str(),
-			NULL, SW_NORMAL);
-	}
-
-	// Delete the file download object.
-	delete fdl;
+	DownloadFile(goItem, true);
 }
 
 /**

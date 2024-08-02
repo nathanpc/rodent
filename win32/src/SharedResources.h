@@ -21,7 +21,7 @@
 #define IDM_STOP                        (IDM_BASE + 5)
 #define IDM_GO                          (IDM_BASE + 6)
 
-// Controls
+// Controls (Main Window)
 #define IDC_BASE                        1100
 #define IDC_CMBADDRESS                  (IDC_BASE + 1)
 #define IDC_LSTDIRECTORY                (IDC_BASE + 2)
@@ -29,6 +29,12 @@
 #define IDC_TBADDRESS                   (IDC_BASE + 4)
 #define IDC_RBMAIN                      (IDC_BASE + 5)
 #define IDC_STATUSBAR                   (IDC_BASE + 6)
+
+// Controls (Downloading Dialog)
+#define IDC_BTOPENFOLDER                (IDC_BASE + 7)
+#define IDC_LBLURL                      (IDC_BASE + 8)
+#define IDC_LBLPATH                     (IDC_BASE + 9)
+#define IDC_LBLSIZE                     (IDC_BASE + 10)
 
 // Timers
 #define IDT_BASE                        1200

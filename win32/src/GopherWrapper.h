@@ -132,17 +132,24 @@ class FileDownload {
 private:
 	gopher_file_t *m_gfile;
 	TCHAR *m_fpath;
+	TCHAR *m_bname;
 
 public:
 	FileDownload();
 	FileDownload(gopher_file_t *gfile);
 	virtual ~FileDownload();
 
-	void download(gopher_addr_t *goaddr, gopher_type_t hint,
-				  const TCHAR *fpath);
+	void setup(gopher_addr_t *goaddr, gopher_type_t hint, const TCHAR *fpath);
+	void setup_temp(gopher_addr_t *goaddr, gopher_type_t hint);
+	void download();
 
+	void set_transfer_cb(gopher_file_transfer_func func, void *arg);
+
+	const TCHAR *basename(const gopher_addr_t *addr);
+	const TCHAR *basename();
 	const TCHAR *path();
 	size_t size() const;
+	const gopher_addr_t *c_addr() const;
 	const gopher_file_t *c_file() const;
 };
 

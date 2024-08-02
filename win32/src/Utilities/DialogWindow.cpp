@@ -37,7 +37,15 @@ DialogWindow::~DialogWindow() {
 /**
  * Displays a modeless dialog window.
  *
+ * @warning IF YOU CALL THIS FROM AN OBJECT ALLOCATED IN THE STACK AND NOT IN
+ *          THE HEAP IT WILL RETURN INSTANTLY, THE PARENT OBJECT WILL BE
+ *          DEALLOCATED AND THE "this" OBJECT WILL BECOME INVALID IN THE MIDDLE
+ *          OF THE EXECUTION. ALWAYS ALLOCATE THE OBJECT WITH "new" IF YOU PLAN
+ *          ON USING THIS METHOD.
+ *
  * @return TRUE if the operation was successful.
+ *
+ * @see EnableSelfDisposal
  */
 bool DialogWindow::Show() {
 	HWND hWnd;
@@ -53,7 +61,7 @@ bool DialogWindow::Show() {
 	// Actually show the dialog window.
 	this->bIsModal = false;
 	ShowWindow(hWnd, SW_SHOWNORMAL); 
-    UpdateWindow(hWnd);
+    //UpdateWindow(hWnd);
 
 	return true;
 }

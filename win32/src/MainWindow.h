@@ -57,10 +57,9 @@ private:
 
 	// Download helpers.
 	void OpenShellLink(const Gopher::Item& goItem);
-	Gopher::FileDownload *DownloadFile(const Gopher::Item& goItem);
+	void DownloadFile(const Gopher::Item& goItem, bool bOpen);
 	void DownloadTextFile(const Gopher::Item& goItem);
 	void DownloadImage(const Gopher::Item& goItem);
-	void DownloadOpenDefault(const Gopher::Item& goItem);
 
 	// Parallel computing.
 	static void FetchDirectoryThreadProc(void *lpArgs);

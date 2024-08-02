@@ -811,6 +811,7 @@ const gopher_dir_t *Directory::c_dir() const {
 FileDownload::FileDownload() {
 	this->m_gfile = NULL;
 	this->m_fpath = NULL;
+	this->m_bname = NULL;
 }
 
 /**
@@ -822,6 +823,7 @@ FileDownload::FileDownload() {
 FileDownload::FileDownload(gopher_file_t *gfile) {
 	this->m_gfile = gfile;
 	this->m_fpath = NULL;
+	this->m_bname = NULL;
 }
 
 /**
@@ -832,24 +834,93 @@ FileDownload::~FileDownload() {
 		gopher_file_free(this->m_gfile);
 	if (this->m_fpath)
 		free(this->m_fpath);
+	if (this->m_bname)
+		free(this->m_bname);
+}
+
+/**
+ * Sets up a download to a specific file path.
+ *
+ * @param goaddr Gopherspace address structure. Will NOT be managed by the
+ *               object, you are responsible for freeing this.
+ * @param hint   Hint at the type of file we may be dealing with.
+ * @param fpath  Path to where the downloaded file should be written.
+ *
+ * @see setup_default
+ * @see setup_temp
+ */
+void FileDownload::setup(gopher_addr_t *goaddr, gopher_type_t hint,
+						 const TCHAR *fpath) {
+	// Basic copying of constant data.
+	this->m_fpath = _tcsdup(fpath);
+	this->basename();
+
+	// Create internal file download structure.
+#ifdef UNICODE
+	char *mbfpath = win_wcstombs(fpath);
+	this->m_gfile = gopher_file_new(goaddr, mbfpath, hint);
+	free(mbfpath);
+	mbfpath = NULL;
+#else
+	this->m_gfile = gopher_file_new(goaddr, fpath, hint);
+#endif // UNICODE
+}
+
+/**
+ * Sets up a temporary file transfer.
+ *
+ * @param goaddr Gopherspace address structure. Will NOT be managed by the
+ *               object, you are responsible for freeing this.
+ * @param hint   Hint at the type of file we may be dealing with.
+ *
+ * @see setup
+ * @see setup_default
+ */
+void FileDownload::setup_temp(gopher_addr_t *goaddr, gopher_type_t hint) {
+	tstring strFilePath;
+
+	// Get temporary folder path.
+	DWORD dwLen = GetTempPath(0, NULL);
+	TCHAR *szTempPath = (TCHAR *)malloc((dwLen + 1) * sizeof(TCHAR));
+	if (szTempPath == NULL)
+		throw std::exception("Failed to allocate temporary folder string");
+	GetTempPath(dwLen + 1, szTempPath);
+	strFilePath = szTempPath;
+	free(szTempPath);
+	szTempPath = NULL;
+
+	// Get file basename.
+	char *szmbBasename = gopher_file_basename(goaddr);
+
+	// Build up a path to the actual temporary file path.
+#ifdef UNICODE
+	this->m_bname = win_mbstowcs(szmbBasename);
+	strFilePath += this->m_bname;
+	free(szmbBasename);
+	szmbBasename = NULL;
+#else
+	this->m_bname = szmbBasename;
+	strFilePath += szmbBasename;
+#endif // UNICODE
+
+	// Perform the actual setup.
+	this->setup(goaddr, hint, strFilePath.c_str());
 }
 
 /**
  * Download the file from the specified gopherspace address.
  *
- * @param goaddr Gopherspace address structure. Will NOT be managed by the
- *               object, you are responsible for freeing this.
- * @param hint   Hint at the type of file we may be dealing with.
- * @param fpath  Path to where the downloaded file should be written. Pass NULL
- *               to extrapolate one from the address and download to the
- *               temporary folder.
+ * @see setup
  */
-void FileDownload::download(gopher_addr_t *goaddr, gopher_type_t hint,
-							const TCHAR *fpath) {
+void FileDownload::download() {
 	int ret;
 
+	// Check if we have set things up.
+	if (this->m_gfile == NULL)
+		throw std::exception("Can't download a file without setting up first");
+
 	// Connect to the server.
-	ret = gopher_connect(goaddr);
+	ret = gopher_connect(this->m_gfile->addr);
 	if (ret != 0) {
 		// Build up the exception message.
 		std::string msg("Failed to connect to server: ");
@@ -857,49 +928,8 @@ void FileDownload::download(gopher_addr_t *goaddr, gopher_type_t hint,
 		throw std::exception(msg.c_str());
 	}
 
-	// Get the file path.
-	char *fp = NULL;
-	if (fpath) {
-#ifdef UNICODE
-		fp = win_wcstombs(fpath);
-#else
-		fp = strdup(fpath);
-#endif // UNICODE
-	} else {
-		// Get a default temporary file path if one wasn't supplied.
-		DWORD dwLen = GetTempPath(0, NULL);
-		TCHAR *szTempPath = (TCHAR *)malloc((dwLen + 1) * sizeof(TCHAR));
-		if (szTempPath == NULL) {
-			gopher_disconnect(goaddr);
-			throw std::exception("Failed to allocate temporary folder string");
-		}
-		GetTempPath(dwLen + 1, szTempPath);
-
-		// Get file basename and allocate path string.
-		char *bname = gopher_file_basename(goaddr);
-		fp = (char *)malloc((dwLen + strlen(bname) + 1) * sizeof(char));
-		if (fp == NULL) {
-			gopher_disconnect(goaddr);
-			throw std::exception("Failed to allocate temporary path string");
-		}
-
-		// Build up a path to the actual temporary file.
-#ifdef UNICODE
-		char *tpath = win_wcstombs(szTempPath);
-		strcpy(fp, tpath);
-		free(tpath);
-#else
-		strcpy(fp, szTempPath);
-#endif // UNICODE
-		strcat(fp, bname);
-		free(szTempPath);
-		free(bname);
-	}
-
 	// Download file from address.
-	ret = gopher_file_download(goaddr, hint, fp, &this->m_gfile);
-	free(fp);
-	fp = NULL;
+	ret = gopher_file_download(this->m_gfile);
 	if (ret != 0) {
 		// Build up the exception message.
 		std::string msg("Failed to request directory: ");
@@ -908,9 +938,64 @@ void FileDownload::download(gopher_addr_t *goaddr, gopher_type_t hint,
 	}
 
 	// Gracefully disconnect from the server.
-	ret = gopher_disconnect(goaddr);
+	ret = gopher_disconnect(this->m_gfile->addr);
 	if (ret != 0)
 		perror("Failed to disconnect");
+}
+
+/**
+ * Sets up a callback to listen for reports of transferred bytes while
+ * downloading.
+ *
+ * @param func Callback function.
+ * @param arg  Optional. Parameter to be passed to the callback function.
+ */
+void FileDownload::set_transfer_cb(gopher_file_transfer_func func, void *arg) {
+	gopher_file_set_transfer_cb(this->m_gfile, func, arg);
+}
+
+/**
+ * Gets the basename from an address structure and caches the basename.
+ *
+ * @param addr Gopherspace address structure to extract basename from selector.
+ *
+ * @return Basename of the requested file in the address structure.
+ */
+const TCHAR *FileDownload::basename(const gopher_addr_t *addr) {
+	// Dispose of any previous basename.
+	if (this->m_bname)
+		free(this->m_bname);
+
+	// Get the basename from address selector.
+	char *bname = gopher_file_basename(addr);
+#ifdef UNICODE
+	this->m_bname = win_mbstowcs(bname);
+	free(bname);
+	bname = NULL;
+#else
+	this->m_bname = bname;
+#endif // UNICODE
+
+	return this->m_bname;
+}
+
+/**
+ * Gets the basename from the internal requested address structure.
+ *
+ * @return Basename of the requested file in the address structure.
+ */
+const TCHAR *FileDownload::basename() {
+	// Get the basename if needed.
+	if (this->m_bname == NULL) {
+		// Check if we have an address structure to get the basename from.
+		if ((this->m_gfile == NULL) || (this->m_gfile->addr == NULL))
+			throw std::exception("Can't get basename without setting up first");
+
+		// Get the basename.
+		return this->basename(this->m_gfile->addr);
+	}
+
+	return this->m_bname;
 }
 
 /**
@@ -933,6 +1018,15 @@ const TCHAR *FileDownload::path() {
  */
 size_t FileDownload::size() const {
 	return this->m_gfile->fsize;
+}
+
+/**
+ * Gets the internal gopherspace address structure.
+ *
+ * @return Internal gopherspace address structure.
+ */
+const gopher_addr_t *FileDownload::c_addr() const {
+	return const_cast<const gopher_addr_t *>(this->m_gfile->addr);
 }
 
 /**

@@ -143,6 +143,9 @@
     <ClInclude Include="..\..\src\MainWindow.h">
       <Filter>Windows and Dialogs</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\DownloadDialog.h">
+      <Filter>Windows and Dialogs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\GopherWrapper.cpp">
@@ -171,6 +174,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\Utilities\MsgBoxes.cpp">
       <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DownloadDialog.cpp">
+      <Filter>Windows and Dialogs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
