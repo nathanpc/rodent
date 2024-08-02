@@ -109,9 +109,22 @@ typedef struct gopher_dir_s {
 } gopher_dir_t;
 
 /**
+ * File download bytes transferred reporting callback function.
+ *
+ * @param gf  Gopher downloaded file object. Must be cast when handled.
+ * @param arg Optional data set by the event handler setup.
+ */
+typedef void (*gopher_file_transfer_func)(const void *gf, void *arg);
+
+/**
  * Gopher downloaded file object.
  */
 typedef struct gopher_file_s {
+	gopher_addr_t *addr;
+
+	gopher_file_transfer_func transfer_cb;
+	void *transfer_cb_arg;
+
 	char *fpath;
 	size_t fsize;
 	gopher_type_t type;
@@ -136,11 +149,13 @@ void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
 					 int inclusive);
 
 /* File download handling. */
-gopher_file_t *gopher_file_new(const char *path, gopher_type_t hint);
-int gopher_file_download(const gopher_addr_t *addr, gopher_type_t hint,
-						 const char *path, gopher_file_t **gf);
+gopher_file_t *gopher_file_new(gopher_addr_t *addr, const char *path,
+							   gopher_type_t hint);
+int gopher_file_download(gopher_file_t *gf);
 void gopher_file_free(gopher_file_t *gf);
 char *gopher_file_basename(const gopher_addr_t *addr);
+void gopher_file_set_transfer_cb(gopher_file_t *gf,
+								 gopher_file_transfer_func func, void *arg);
 
 /* Item line parsing */
 int gopher_item_parse(gopher_item_t **item, const char *line);

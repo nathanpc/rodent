@@ -817,14 +817,17 @@ void gopher_dir_free(gopher_dir_t *dir, gopher_recurse_dir_t recurse,
  *
  * @warning This function dinamically allocates memory.
  *
+ * @param addr Gopherspace address object already connected to the server.
  * @param path Path to where to download the file to.
  * @param hint Hint at the type of file we may be dealing with.
  *
  * @return Newly initialized Gopher file download object.
  *
  * @see gopher_file_free
+ * @see gopher_file_download
  */
-gopher_file_t *gopher_file_new(const char *path, gopher_type_t hint) {
+gopher_file_t *gopher_file_new(gopher_addr_t *addr, const char *path,
+							   gopher_type_t hint) {
 	gopher_file_t *gf;
 
 	/* Allocate the object. */
@@ -836,68 +839,65 @@ gopher_file_t *gopher_file_new(const char *path, gopher_type_t hint) {
 	}
 
 	/* Initialize the object. */
+	gf->addr = addr;
 	gf->fpath = strdup(path);
 	gf->fsize = 0;
 	gf->type = hint;
+	gf->transfer_cb = NULL;
+	gf->transfer_cb_arg = NULL;
 
 	return gf;
 }
 
 /**
- * Requests a file to download from a Gopher server.
+ * Downloads a file from a Gopher server.
  *
- * @warning This function dinamically allocates memory.
+ * @warning Ensure to connect to the address in the download object before
+ *          calling this function.
  *
- * @param addr Gopherspace address object already connected to the server.
- * @param hint Hint at the type of file we may be dealing with.
- * @param path Path to where to download the file to.
- * @param gf   Pointer to where the download information will be stored.
+ * @param gf Gopher file download object.
  *
  * @return 0 if the operation was successful. Check return against strerror() in
  *         case of failure.
  *
+ * @see gopher_file_new
  * @see gopher_file_free
  */
-int gopher_file_download(const gopher_addr_t *addr, gopher_type_t hint,
-						 const char *path, gopher_file_t **gf) {
+int gopher_file_download(gopher_file_t *gf) {
 	char buf[RECV_FILE_BUF];
 	size_t recv_len;
-	gopher_file_t *gfile;
 	FILE *fh;
 	int ret;
 	
 	/* Send selector of our request. */
-	ret = gopher_send_line(addr, (addr->selector) ? addr->selector : "", NULL);
+	ret = gopher_send_line(gf->addr, (gf->addr->selector) ?
+		gf->addr->selector : "", NULL);
 	if (ret != 0) {
 		log_errno(LOG_ERROR, "Failed to send line during download request");
 		return ret;
 	}
 	
-	/* Initialize download file object. */
-	*gf = gopher_file_new(path, hint);
-	if (*gf == NULL) {
-		log_errno(LOG_ERROR, "Failed to initialize download file object");
-		return -1;
-	}
-
 	/* Open file for writing. */
-	fh = fopen(path, "wb");
+	fh = fopen(gf->fpath, "wb");
 	if (fh == NULL) {
 		log_errno(LOG_ERROR, "Failed to open download file for writing");
 		return errno;
 	}
 
 	/* Read everything that comes from the stream. */
-	gfile = *gf;
-	while ((ret = gopher_recv_raw(addr, buf, RECV_FILE_BUF, &recv_len, 0))
+	while ((ret = gopher_recv_raw(gf->addr, buf, RECV_FILE_BUF, &recv_len, 0))
 			== 0) {
 		/* Check if the connection was terminated. */
 		if ((ret == 0) && (recv_len == 0))
 			break;
 		
 		/* Increase the size counter and write stream to file. */
-		gfile->fsize += recv_len;
+		gf->fsize += recv_len;
 		fwrite(buf, sizeof(char), recv_len, fh);
+
+		/* Report downloaded size to callback function. */
+		if (gf->transfer_cb)
+			gf->transfer_cb((const void *)gf, gf->transfer_cb_arg);
 	}
 	fclose(fh);
 	fh = NULL;
@@ -905,8 +905,6 @@ int gopher_file_download(const gopher_addr_t *addr, gopher_type_t hint,
 	/* Check if something went wrong. */
 	if (ret != 0) {
 		log_errno(LOG_ERROR, "Failed to download file");
-		gopher_file_free(*gf);
-		*gf = NULL;
 		return ret;
 	}
 
@@ -966,6 +964,20 @@ char *gopher_file_basename(const gopher_addr_t *addr) {
 
 	/* Build a fallback filename from the server hostname. */
 	return strdup(addr->host);
+}
+
+/**
+ * Sets up a callback to listen for reports of transferred bytes while
+ * downloading.
+ *
+ * @param gf   Gopher file download object.
+ * @param func Callback function.
+ * @param arg  Optional. Parameter to be passed to the callback function.
+ */
+void gopher_file_set_transfer_cb(gopher_file_t *gf,
+								 gopher_file_transfer_func func, void *arg) {
+	gf->transfer_cb = func;
+	gf->transfer_cb_arg = arg;
 }
 
 /*
