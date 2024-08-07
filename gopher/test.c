@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 		addr = gopher_addr_new("gopher.floodgap.com", 70, "/overbite");
 	} else {
 		/* Parse Gopher URI from argument. */
-		addr = gopher_addr_parse(argv[1]);
+		addr = gopher_addr_parse(argv[1], NULL);
 	}
 	
 	/* Ensure we got a gopherspace address. */

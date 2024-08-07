@@ -1,17 +1,8 @@
-# Tools
-CC  = gcc
-GDB = gdb --args
-RM  = rm -f
-
-# Flags
-CFLAGS  = -Wall --std=gnu89
-LDFLAGS =
-LIBS    =
+.include "common.mk"
 
 # Sources and Objects
-SOURCES = test.c gopher.c
-TARGET   = rodent_test
-OBJECTS := $(patsubst %.c, %.o, $(SOURCES))
+TARGET  = rodent_test
+OBJECTS := test.o gopher.o
 
 .PHONY: all compile run debug memcheck clean
 all: compile
@@ -39,4 +30,4 @@ clean:
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS) $(LDFLAGS) $(LIBS)

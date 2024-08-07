@@ -292,7 +292,8 @@ char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
 		return NULL;
 
 	/* Convert port number to string. */
-	itoa(addr->port, port, 10);
+	snprintf(port, 6, "%u", addr->port);
+	port[5] = '\0';
 
 	/* Estimate the length of the string needed to store the URL. */
 	len = 9 + 1;  /* gopher:// + NUL */
