@@ -716,13 +716,18 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		ret = gopher_item_parse(&item, line);
 		if (ret != 0) {
 			char *msg;
+			size_t msg_len;
+
 			log_printf(LOG_WARNING, "Failed to parse line item during "
 				"directory request: \"%s\"\n", line);
 			pd->err_count++;
 
-			msg = (char *)malloc((20 + strlen(line)) * sizeof(char));
-			sprintf(msg, "PARSING FAILED: \"%s\"", line);
-			item = gopher_item_new(GOPHER_TYPE_INTERNAL, msg);
+			/* Build string to warn user of the parsing issue. */
+			msg_len = strlen("PARSING FAILED: \"\"") + strlen(line);
+			msg = (char *)malloc((msg_len + 1) * sizeof(char));
+			snprintf(msg, msg_len, "PARSING FAILED: \"%s\"", line);
+			msg[msg_len] = '\0';
+			item = gopher_item_new(GOPHER_TYPE_ERROR, msg);
 			free(msg);
 			
 #ifdef DEBUG
@@ -1523,8 +1528,9 @@ int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
 
 		/* Go through the received data looking for the end of the line. */
 		for (i = 0; i < recv_len; i++) {
-			if ((peek[i] == '\n') || (peek[i] == '\r') &&
-					((i + 1) < recv_len) && (peek[i + 1] == '\n')) {
+			/* Handle LF (non-standard) and CRLF line endings. */
+			if ((peek[i] == '\n') || ((peek[i] == '\r') &&
+					((i + 1) < recv_len) && (peek[i + 1] == '\n'))) {
 				line_len += 2;
 				found = '\r';
 
