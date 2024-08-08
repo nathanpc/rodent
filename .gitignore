@@ -8,6 +8,7 @@ build/
 *.exe
 *.o
 *.a
+*.core
 
 # Visual Studio Code
 .cache/
