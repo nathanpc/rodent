@@ -1,0 +1,217 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#ifndef APSTUDIO_INVOKED
+#include "../src/targetver.h"
+#endif
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+
+#include "../src/SharedResources.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+//LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_RODENT              ICON                    "Rodent.ico"
+IDI_SMALL               ICON                    "small.ico"
+IDI_LEFT                ICON                    "..\\icons\\arrow_left_blue.ico"
+IDI_RIGHT               ICON                    "..\\icons\\arrow_right_blue.ico"
+IDI_PLAY                ICON                    "..\\icons\\media_play_green.ico"
+IDI_REFRESH             ICON                    "..\\icons\\refresh.ico"
+IDI_STOP                ICON                    "..\\icons\\stop.ico"
+IDI_UP                  ICON                    "..\\icons\\arrow_up_blue.ico"
+IDI_TYPE_DOC            ICON                    "..\\icons\\document_certificate.ico"
+IDI_TYPE_TEXT           ICON                    "..\\icons\\document_text.ico"
+IDI_TYPE_WEB            ICON                    "..\\icons\\earth.ico"
+IDI_TYPE_ERROR          ICON                    "..\\icons\\error.ico"
+IDI_TYPE_FOLDER         ICON                    "..\\icons\\folder.ico"
+IDI_TYPE_TELNET         ICON                    "..\\icons\\laptop.ico"
+IDI_TYPE_AUDIO          ICON                    "..\\icons\\loudspeaker.ico"
+IDI_TYPE_VIDEO          ICON                    "..\\icons\\movie.ico"
+IDI_TYPE_IMAGE          ICON                    "..\\icons\\photo_scenery.ico"
+IDI_TYPE_UNKNOWN        ICON                    "..\\icons\\unknown.ico"
+IDI_TYPE_SEARCH         ICON                    "..\\icons\\view.ico"
+IDI_TYPE_BIN            ICON                    "..\\icons\\window_gear.ico"
+IDI_BLANK               ICON                    "..\\icons\\blank.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDC_RODENT MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "E&xit",                       IDM_EXIT
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About ...",                  IDM_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDC_RODENT ACCELERATORS
+BEGIN
+    "?",            IDM_ABOUT,              ASCII,  ALT
+    "/",            IDM_ABOUT,              ASCII,  ALT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 170, 62
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About Rodent"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    ICON            128,IDC_STATIC,14,14,21,20
+    LTEXT           "Rodent, Version 1.0",IDC_STATIC,42,14,114,8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2024",IDC_STATIC,42,26,114,8
+    DEFPUSHBUTTON   "OK",IDOK,113,41,50,14,WS_GROUP
+END
+
+IDD_DOWNLOAD DIALOGEX 0, 0, 251, 67
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "Downloading..."
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Open",IDOK,86,46,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,194,46,50,14
+    PUSHBUTTON      "Open Folder",IDC_BTOPENFOLDER,140,46,50,14
+    LTEXT           "Downloading ",IDC_STATIC,7,7,44,8
+    LTEXT           "Saving file to: ",IDC_STATIC,7,19,47,8
+    LTEXT           "Bytes downloaded: ",IDC_STATIC,7,31,64,8
+    LTEXT           "gopher://somehost.com:70/5/placeholder.bin",IDC_LBLURL,51,7,193,8,SS_ENDELLIPSIS
+    LTEXT           "C:\\Placeholder\\Text.txt",IDC_LBLPATH,54,19,190,8,SS_ENDELLIPSIS
+    LTEXT           "000000 bytes",IDC_LBLSIZE,71,31,173,8,SS_ENDELLIPSIS
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 163
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 55
+    END
+
+    IDD_DOWNLOAD, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 244
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 60
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE
+BEGIN
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""../src/targetver.h""\r\n"
+    "#endif\r\n"
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\r\n"
+    "#include ""../src/SharedResources.h""\0"
+END
+
+3 TEXTINCLUDE
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RT_MANIFEST
+//
+
+1                       RT_MANIFEST             "manifest.xml"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_APP_TITLE           "Rodent"
+    IDS_BACK                "Back"
+    IDS_NEXT                "Next"
+    IDS_UP                  "Up"
+    IDS_REFRESH             "Refresh"
+    IDS_STOP                "Stop"
+    IDC_RODENT              "RODENT"
+    IDS_GO                  "Go"
+    IDS_TBNAVLABELS         "~Back~Next~Up~Refresh~Stop~Go"
+END
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED

@@ -12,7 +12,7 @@
 
 #include "targetver.h"
 
-#define WIN32_LEAN_AND_MEAN  // Exclude rarely-used stuff from Windows headers.
+//#define WIN32_LEAN_AND_MEAN  // Exclude rarely-used stuff from Windows headers.
 // Windows Header Files
 #include <windows.h>
 #include <shellapi.h>
@@ -49,7 +49,14 @@
 #include "SharedResources.h"
 #if _MSC_VER == 1600
 	#include "../vs2010/Rodent/Resource.h"
-#endif // _MSC_VER == 1600
+#elif _MSC_VER == 1200
+	#include "../vs6/Resource.h"
+#endif // _MSC_VER
+
+// nullptr definition.
+#ifndef nullptr
+	#define nullptr NULL
+#endif // !nullptr
 
 // Utilities
 #include "Utilities/MsgBoxes.h"

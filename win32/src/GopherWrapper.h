@@ -47,7 +47,7 @@ public:
 
 	static Address replicate(const gopher_addr_t *addr);
 	void invalidate();
-	void free();
+	void release();
 
 	static bool has_parent(const gopher_addr_t *addr);
 	bool has_parent() const;
@@ -103,9 +103,9 @@ public:
 	virtual ~Directory();
 
 	void set_ownership(bool owner);
-	void free(gopher_recurse_dir_t recurse, bool inclusive);
-	void free(gopher_recurse_dir_t recurse);
-	void free(int recurse_flags);
+	void release(gopher_recurse_dir_t recurse, bool inclusive);
+	void release(gopher_recurse_dir_t recurse);
+	void release(int recurse_flags);
 
 	Directory *push(gopher_addr_t *goaddr);
 	void set_prev(Directory *dir);

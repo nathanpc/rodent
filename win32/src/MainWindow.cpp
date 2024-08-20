@@ -102,7 +102,7 @@ MainWindow::~MainWindow() {
 		}
 
 		// Free the initial directory.
-		goInitialDirectory->free(RECURSE_BACKWARD | RECURSE_FORWARD);
+		goInitialDirectory->release(RECURSE_BACKWARD | RECURSE_FORWARD);
 		delete goInitialDirectory;
 		goInitialDirectory = nullptr;
 	}

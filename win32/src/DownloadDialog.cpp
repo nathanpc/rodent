@@ -109,7 +109,11 @@ void DownloadDialog::FileTransferThreadProc(void *lpArgs) {
 
 		// Setup save file dialog.
 		OPENFILENAME ofn = {0};
+#if _MSC_VER > 1200
 		ofn.lStructSize = OPENFILENAME_SIZE_VERSION_400;
+#else
+		ofn.lStructSize = sizeof(OPENFILENAME);
+#endif // _MSC_VER > 1200
 		ofn.hwndOwner = lpThis->hDlg;
 		ofn.lpstrTitle = _T("Download file");
 		ofn.lpstrFilter = _T("All Files (*.*)\0*.*\0");

@@ -55,7 +55,7 @@ Address::~Address() {
 		this->disconnect();
 
 	if (!this->read_only())
-		this->free();
+		this->release();
 }
 
 /**
@@ -102,7 +102,7 @@ gopher_addr_t *Address::from_url(const TCHAR *url, gopher_type_t *type) {
 
 #ifdef UNICODE
 	// Free the temporary buffer.
-	std::free(szURL);
+	free(szURL);
 #endif // UNICODE
 
 	return addr;
@@ -138,7 +138,7 @@ TCHAR *Address::as_url(const gopher_addr_t *addr, gopher_type_t type) {
 #ifdef UNICODE
 	char *mb = gopher_addr_str(addr, type);
 	TCHAR *uni = win_mbstowcs(mb);
-	::free(mb);
+	free(mb);
 	mb = NULL;
 
 	return uni;
@@ -179,7 +179,7 @@ void Address::disconnect() {
 	if (this->connected()) {
 		gopher_disconnect(this->m_addr);
 		this->m_bConnected = false;
-		this->free();
+		this->release();
 	}
 }
 
@@ -218,7 +218,7 @@ void Address::invalidate() {
 /**
  * Frees the internal structure help by this object.
  */
-void Address::free() {
+void Address::release() {
 	if (this->read_only())
 		throw std::exception("Can't free a read-only gopher item");
 
@@ -544,7 +544,7 @@ Directory::Directory(gopher_dir_t *dir) {
  */
 Directory::~Directory() {
 	if (this->m_bOwner) {
-		this->free(RECURSE_FORWARD);
+		this->release(RECURSE_FORWARD);
 	} else if (this->m_items != nullptr) {
 		delete this->m_items;
 		this->m_items = nullptr;
@@ -598,7 +598,7 @@ Directory *Directory::push(gopher_addr_t *goaddr) {
 	dir->set_ownership(false);
 
 	// Free everything that should no longer be in the history.
-	this->free(RECURSE_FORWARD, false);
+	this->release(RECURSE_FORWARD, false);
 	
 	// Ensure the history stack link is preserved.
 	dir->set_prev(this);
@@ -719,7 +719,7 @@ void Directory::set_ownership(bool owner) {
  * @param recurse   Bitwise field to recursively free its history stack.
  * @param inclusive Should we also free our own internal directory pointer?
  */
-void Directory::free(gopher_recurse_dir_t recurse, bool inclusive) {
+void Directory::release(gopher_recurse_dir_t recurse, bool inclusive) {
 	// Free underlying structure.
 	if (this->m_dir != nullptr) {
 		gopher_dir_free(this->m_dir, recurse, inclusive);
@@ -756,8 +756,8 @@ void Directory::free(gopher_recurse_dir_t recurse, bool inclusive) {
  *
  * @param recurse Bitwise field to recursively free its history stack.
  */
-void Directory::free(gopher_recurse_dir_t recurse) {
-	this->free(recurse, true);
+void Directory::release(gopher_recurse_dir_t recurse) {
+	this->release(recurse, true);
 }
 
 /**
@@ -765,8 +765,8 @@ void Directory::free(gopher_recurse_dir_t recurse) {
  *
  * @param recurse_flags Bitwise field to recursively free its history stack.
  */
-void Directory::free(int recurse_flags) {
-	this->free(static_cast<gopher_recurse_dir_t>(recurse_flags));
+void Directory::release(int recurse_flags) {
+	this->release(static_cast<gopher_recurse_dir_t>(recurse_flags));
 }
 
 /**

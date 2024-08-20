@@ -9,6 +9,7 @@
 #include "MsgBoxes.h"
 
 #include <tchar.h>
+#include <malloc.h>
 
 /**
  * Generic message box.
@@ -104,11 +105,13 @@ int MsgBoxLastError(HWND hwndParent) {
 int MsgBoxException(HWND hwndParent, const std::exception& exc,
 					LPCTSTR szTitle) {
 #ifdef UNICODE
+	TCHAR *szMessage = NULL;
+
 	// Get required buffer size and allocate some memory for it.
 	int nLen = MultiByteToWideChar(CP_OEMCP, 0, exc.what(), -1, NULL, 0);
 	if (nLen == 0)
 		goto failure;
-	TCHAR *szMessage = (TCHAR *)malloc(nLen * sizeof(TCHAR));
+	szMessage = (TCHAR *)malloc(nLen * sizeof(TCHAR));
 	if (szMessage == NULL) {
 		throw std::exception("Failed to allocate memory for dialog exception "
 			"message string");

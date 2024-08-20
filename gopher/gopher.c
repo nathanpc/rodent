@@ -22,9 +22,9 @@
 
 /* Networking includes. */
 #ifdef _WIN32
-	#include <windows.h>
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
+	#include <windows.h>
 #else
 	#include <sys/socket.h>
 	#include <arpa/inet.h>
@@ -510,7 +510,11 @@ int gopher_connect(gopher_addr_t *addr) {
 		log_printf(LOG_ERROR, "Couldn't resolve an address for %s\n",
 			addr->host);
 		freeaddrinfo(query);
+#ifdef EAFNOSUPPORT
 		return EAFNOSUPPORT;
+#else
+		return EINVAL;
+#endif /* EAFNOSUPPORT */
 	}
 
 	/* Allocate memory for the IP address. */
@@ -1642,7 +1646,11 @@ int sockaddrstr(char **buf, const struct sockaddr *sock_addr) {
 			break;
 		default:
 			*buf = NULL;
+#ifdef EAFNOSUPPORT
 			return EAFNOSUPPORT;
+#else
+			return EINVAL;
+#endif /* EAFNOSUPPORT */
 	}
 
 #ifdef _WIN32
@@ -1774,7 +1782,7 @@ void log_printf(log_level_t level, const char *format, ...) {
 #ifndef _WIN32
 	vfprintf(stderr, format, args);
 #else
-	vsnprintf(szmbMsg, 254, format, args);
+	_vsnprintf(szmbMsg, 254, format, args);
 	szmbMsg[254] = '\0';
 	szMsg = win_mbstowcs(szmbMsg);
 	OutputDebugString(szMsg);
