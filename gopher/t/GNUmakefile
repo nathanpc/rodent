@@ -10,13 +10,16 @@ SOURCES = 01_url.c gopher.c
 TARGET  = test
 OBJECTS := $(patsubst %.c, %.o, $(SOURCES))
 
-.PHONY: all compile run debug memcheck clean
+.PHONY: all compile run testcount debug memcheck clean
 all: compile
 
 compile: $(TARGET)	
 
 run: $(TARGET)
 	./$(TARGET)
+
+testcount: 01_url.c
+	grep -o -E "\ttest_url[_\(a-z]+" $^ | wc -l
 
 debug: CFLAGS += -g3 -DDEBUG
 debug: clean all
