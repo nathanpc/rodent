@@ -80,6 +80,7 @@ typedef struct gopher_addr_s {
 	char *host;
 	char *selector;
 	uint16_t port;
+	gopher_type_t type;
 	
 	int sockfd;
 	struct sockaddr_in *ipaddr;
@@ -93,7 +94,6 @@ typedef struct gopher_item_s {
 	char *label;
 	gopher_addr_t *addr;
 	struct gopher_item_s *next;
-	gopher_type_t type;
 } gopher_item_t;
 
 /**
@@ -132,9 +132,9 @@ typedef struct gopher_file_s {
 
 /* Gopherspace address handling. */
 gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
-							   const char *selector);
-gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type);
-char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type);
+							   const char *selector, gopher_type_t type);
+gopher_addr_t *gopher_addr_parse(const char *uri);
+char *gopher_addr_str(const gopher_addr_t *addr);
 int gopher_addr_up(gopher_addr_t **parent, const gopher_addr_t *addr);
 void gopher_addr_print(const gopher_addr_t *addr);
 void gopher_addr_free(gopher_addr_t *addr);
@@ -166,7 +166,7 @@ char *gopher_item_url(const gopher_item_t *item);
 /* Networking operations. */
 int gopher_send_raw(const gopher_addr_t *addr, const void *buf, size_t len,
 					size_t *sent_len);
-int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len);				
+int gopher_send(const gopher_addr_t *addr, const char *buf, size_t *sent_len);
 int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 					 size_t *sent_len);
 int gopher_recv_raw(const gopher_addr_t *addr, void *buf, size_t buf_len,

@@ -34,10 +34,11 @@ int main(int argc, char **argv) {
 	/* Use default address if none were supplied. */
 	if (argc < 2) {
 		printf("No address was supplied, using floodgap's for testing.\n");
-		addr = gopher_addr_new("gopher.floodgap.com", 70, "/overbite");
+		addr = gopher_addr_new("gopher.floodgap.com", 70, "/overbite",
+			GOPHER_TYPE_DIR);
 	} else {
 		/* Parse Gopher URI from argument. */
-		addr = gopher_addr_parse(argv[1], NULL);
+		addr = gopher_addr_parse(argv[1]);
 	}
 	
 	/* Ensure we got a gopherspace address. */

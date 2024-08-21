@@ -106,7 +106,7 @@ const char *strdupsep(char **buf, const char *str, char sep);
 /* Private methods. */
 int sockaddrstr(char **buf, const struct sockaddr *sock_addr);
 int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai);
-gopher_item_t *gopher_item_new(gopher_type_t type, const char *label);
+gopher_item_t *gopher_item_new(const char *label, gopher_addr_t *addr);
 gopher_dir_t *gopher_dir_new(gopher_addr_t *addr);
 
 /*
@@ -125,6 +125,7 @@ gopher_dir_t *gopher_dir_new(gopher_addr_t *addr);
  * @param host     Optional. Domain name or IP address of the Gopher server.
  * @param port     Port to use for communicating with the Gopher server.
  * @param selector Optional. Selector of the content to retrieve.
+ * @param type     Entry type character. Use NUL if should be omitted.
  *
  * @return Newly populated gopherspace address object. NULL if an error
  *         occurred. Check errno case of failure.
@@ -132,7 +133,7 @@ gopher_dir_t *gopher_dir_new(gopher_addr_t *addr);
  * @see gopher_addr_free
  */
 gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
-							   const char *selector) {
+							   const char *selector, gopher_type_t type) {
 	gopher_addr_t *addr;
 
 	/* Allocate the object. */
@@ -147,6 +148,7 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
 	addr->host = (host) ? strdup(host) : NULL;
 	addr->port = port;
 	addr->selector = (selector) ? strdup(selector) : NULL;
+	addr->type = type;
 	addr->sockfd = INVALID_SOCKET;
 	addr->ipaddr = NULL;
 	addr->ipaddr_len = 0;
@@ -160,8 +162,6 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  * @warning This function dinamically allocates memory.
  *
  * @param uri  Universal Resource Identifier of the gopherspace.
- * @param type Optional. Stores the parsed type. If URI didn't contain one a
- *             NUL terminator will be returned.
  *
  * @return Newly parsed gopherspace address object or NULL if a parsing error
  *         occurred. Check errno case of failure.
@@ -169,14 +169,10 @@ gopher_addr_t *gopher_addr_new(const char *host, uint16_t port,
  * @see gopher_addr_new
  * @see gopher_addr_free
  */
-gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
+gopher_addr_t *gopher_addr_parse(const char *uri) {
 	gopher_addr_t *addr;
 	const char *p;
 	const char *pend;
-
-	/* Ensure we make the type unknown first. */
-	if (type)
-		*type = GOPHER_TYPE_UNKNOWN;
 
 	/* Check if it starts with protocol. */
 	p = uri;
@@ -193,7 +189,7 @@ gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
 	}
 
 	/* Create the address object. */
-	addr = gopher_addr_new(NULL, 70, NULL);
+	addr = gopher_addr_new(NULL, 70, NULL, GOPHER_TYPE_UNKNOWN);
 	if (addr == NULL)
 		return NULL;
 
@@ -223,18 +219,14 @@ gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
 		addr->port = (uint16_t)atoi(port);
 		free(port);
 	}
-	if (pend == NULL) {
-		if (type)
-			*type = GOPHER_TYPE_DIR;
+	if (pend == NULL)
 		return addr;
-	}
 	
 	/* Get type identifier. */
 	p = pend + 1;
 	if (*p == '\0')
 		return addr;
-	if (type)
-		*type = (gopher_type_t)*p;
+	addr->type = (gopher_type_t)*p;
 	p++;
 	
 	/* Get the selector. */
@@ -281,16 +273,16 @@ int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
  * @warning This function dinamically allocates memory.
  *
  * @param addr Gopherspace address object.
- * @param type Entry type character. Use NUL terminator if should be omitted.
  *
  * @return URL string representation of the gopherspace address object.
  *
  * @see gopher_addr_print
  */
-char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
+char *gopher_addr_str(const gopher_addr_t *addr) {
 	char port[6];
 	char *url;
 	char *buf;
+	char typechr;
 	size_t len;
 
 	/* Do we even have anything to do here? */
@@ -304,9 +296,7 @@ char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
 	/* Estimate the length of the string needed to store the URL. */
 	len = 9 + 1;  /* gopher:// + NUL */
 	len += strlen(addr->host) + 1;
-	len += strlen(port) + 1;
-	if ((type != GOPHER_TYPE_UNKNOWN) && (type != GOPHER_TYPE_INTERNAL))
-		len += 1;
+	len += strlen(port) + 3;  /* Account for type field. */
 	if (addr->selector)
 		len += strlen(addr->selector) + 1;
 
@@ -319,8 +309,9 @@ char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
 	}
 
 	/* Ensure we have a type in the URL always. As specified in RFC 4266 */
-	if ((type == GOPHER_TYPE_UNKNOWN) || (type == GOPHER_TYPE_INTERNAL))
-		type = GOPHER_TYPE_DIR;
+	typechr = (char)addr->type;
+	if (addr->type == '\0')
+		typechr = (char)GOPHER_TYPE_INFO;
 
 	/* Build up the URL. */
 	buf = strcatp(url, "gopher://");
@@ -330,7 +321,7 @@ char *gopher_addr_str(const gopher_addr_t *addr, gopher_type_t type) {
 	*buf++ = '/';
 	*buf = '\0';
 	if (addr->selector) {
-		*buf++ = (char)type;
+		*buf++ = typechr;
 		buf = strcatp(buf, addr->selector);
 	}
 
@@ -415,8 +406,10 @@ buildparent:
 #endif /* _WIN32 */
 	
 	/* Duplicate the address while changing to the parent selector. */
-	if (parent != NULL)
-		*parent = gopher_addr_new(addr->host, addr->port, selparent);
+	if (parent != NULL) {
+		*parent = gopher_addr_new(addr->host, addr->port, selparent,
+			GOPHER_TYPE_DIR);
+	}
 
 	/* Clean things up. */
 	if (selparent) {
@@ -442,7 +435,7 @@ void gopher_addr_print(const gopher_addr_t *addr) {
 	}
 	
 	/* Print out the object data. */
-	url = gopher_addr_str(addr, GOPHER_TYPE_UNKNOWN);
+	url = gopher_addr_str(addr);
 	printf("%s\n", url);
 	free(url);
 }
@@ -461,6 +454,7 @@ void gopher_addr_free(gopher_addr_t *addr) {
 	if (addr->host)
 		free(addr->host);
 	addr->port = 0;
+	addr->type = GOPHER_TYPE_UNKNOWN;
 	if (addr->selector)
 		free(addr->selector);
 	if (addr->ipaddr)
@@ -733,7 +727,8 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 			msg = (char *)malloc((msg_len + 1) * sizeof(char));
 			snprintf(msg, msg_len, "PARSING FAILED: \"%s\"", line);
 			msg[msg_len] = '\0';
-			item = gopher_item_new(GOPHER_TYPE_ERROR, msg);
+			item = gopher_item_new(msg, gopher_addr_new("_server.fail", 0,
+				"PARSING_FAILED", GOPHER_TYPE_ERROR));
 			free(msg);
 			
 #ifdef DEBUG
@@ -745,7 +740,8 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 		/* Check if a monstrosity of a server just sent an incomplete item. */
 		if (item->addr == NULL) {
 			/* Fix this idiotic problem. */
-			item->addr = gopher_addr_new("_server.fail", 0, "INCOMPLETE_LINE");
+			item->addr = gopher_addr_new("_server.fail", 0, "INCOMPLETE_LINE",
+				GOPHER_TYPE_INFO);
 			pd->err_count++;
 		}
 
@@ -1009,14 +1005,15 @@ void gopher_file_set_transfer_cb(gopher_file_t *gf,
  *
  * @warning This function dinamically allocates memory.
  *
- * @param type  File type of the item.
  * @param label Optional. Label of the item.
+ * @param addr  Optional. Gopherspace address object that will be owned by the
+ *              newly initialized object.
  *
  * @return Newly initialized Gopher line item object.
  *
  * @see gopher_item_free
  */
-gopher_item_t *gopher_item_new(gopher_type_t type, const char *label) {
+gopher_item_t *gopher_item_new(const char *label, gopher_addr_t *addr) {
 	gopher_item_t *item;
 
 	/* Allocate the object. */
@@ -1027,11 +1024,10 @@ gopher_item_t *gopher_item_new(gopher_type_t type, const char *label) {
 	}
 
 	/* Initialize the object. */
-	item->type = type;
 	item->label = NULL;
 	if (label)
 		item->label = strdup(label);
-	item->addr = NULL;
+	item->addr = addr;
 	item->next = NULL;
 
 	return item;
@@ -1050,7 +1046,7 @@ gopher_item_t *gopher_item_new(gopher_type_t type, const char *label) {
  * @see gopher_item_print
  */
 char *gopher_item_url(const gopher_item_t *item) {
-	return gopher_addr_str(item->addr, item->type);
+	return gopher_addr_str(item->addr);
 }
 
 /**
@@ -1069,6 +1065,7 @@ char *gopher_item_url(const gopher_item_t *item) {
  */
 int gopher_item_parse(gopher_item_t **item, const char *line) {
 	gopher_item_t *it;
+	gopher_type_t type;
 	const char *p;
 	char *selector;
 	char *host;
@@ -1094,7 +1091,8 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 
 	/* Initialize the item object. */
 	p = line;
-	*item = gopher_item_new((gopher_type_t)*p++, NULL);
+	type = (gopher_type_t)*p++;
+	*item = gopher_item_new(NULL, NULL);
 	it = *item;
 	if (it == NULL) {
 		log_errno(LOG_ERROR, "Failed to allocate memory for parsed line item");
@@ -1154,7 +1152,7 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 	}
 
 	/* Finally create the address object. */
-	it->addr = gopher_addr_new(host, (uint16_t)atoi(port), selector);
+	it->addr = gopher_addr_new(host, (uint16_t)atoi(port), selector, type);
 	if (it->addr == NULL) {
 		log_errno(LOG_ERROR, "Failed to create address object for parsed line");
 		gopher_item_free(it, 1);
@@ -1180,10 +1178,15 @@ cleanup:
  * @param item Gopher item to have its type printed out.
  */
 void gopher_item_print_type(const gopher_item_t *item) {
+	if (item->addr == NULL) {
+		printf("(null)");
+		return;
+	}
+
 	/* Regex to get this from gopher_type_t definition: */
 	/* s/\s+GOPHER_TYPE_([^\s]+)\s+= '([^'])'(,?)/
 	   case GOPHER_TYPE_$1:\n\tprintf("[$1]");\n\tbreak;\n/g */
-	switch (item->type) {
+	switch (item->addr->type) {
 		case GOPHER_TYPE_INTERNAL:
 			printf("<[INTERNAL]>");
 			break;
@@ -1260,7 +1263,7 @@ void gopher_item_print_type(const gopher_item_t *item) {
 			printf("[XML]");
 			break;
 		default:
-			printf("[UNKNOWN]");
+			printf("<[UNKNOWN]>");
 			break;
 	}
 }
