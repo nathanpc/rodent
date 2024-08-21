@@ -222,6 +222,11 @@ gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
 		addr->port = (uint16_t)atoi(port);
 		free(port);
 	}
+	if (pend == NULL) {
+		if (type)
+			*type = GOPHER_TYPE_DIR;
+		return addr;
+	}
 	
 	/* Get type identifier. */
 	p = pend + 1;
@@ -232,7 +237,7 @@ gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
 	p++;
 	
 	/* Get the selector. */
-	if (*(p + 1) == '\0')
+	if ((*p == '\0') || ((*p == '/') && (*(p + 1) == '\0')))
 		return addr;
 	addr->selector = strdup(p);
 

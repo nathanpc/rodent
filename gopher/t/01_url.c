@@ -19,9 +19,9 @@ int main() {
 	gopher_addr_t *ref;
 
 	/* Setup the test harness. */
-	plan(7 * NUM_URL_TESTS);
+	plan(8 * NUM_URL_TESTS);
 	
-	/* Simplest test. */
+	/* Simplest test without a selector. */
 	ref = gopher_addr_new("g.test.com", 70, NULL);
 	test_url("gopher://g.test.com/", ref);
 	test_url("gopher://g.test.com", ref);
