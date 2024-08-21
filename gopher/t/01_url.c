@@ -19,7 +19,7 @@ int main() {
 	gopher_addr_t *ref;
 
 	/* Setup the test harness. */
-	plan(32 * NUM_URL_TESTS);
+	plan((32 * NUM_URL_TESTS) + 1);
 
 	/* Simplest test without a selector. */
 	printf("#\n# URLs without a selector\n");
@@ -97,6 +97,10 @@ int main() {
 	gopher_addr_free(ref);
 	ref = NULL;
 
+	/* Test invalid URLs. */
+	printf("#\n# Invalid URLs\n");
+	test_url("http://g.test.com/", NULL);
+
 	/* Finish the tests. */
 	done_testing();
 }
@@ -115,11 +119,17 @@ void test_url(const char *url, gopher_addr_t *ref) {
 
 	/* Parse the URL and check against the reference. */
 	tmp = gopher_addr_parse(url, NULL);
-	is(tmp->host, ref->host, "%s host is %s", url, ref->host);
-	ok(tmp->port == ref->port, "%s port is %u", url, ref->port);
-	is(tmp->selector, ref->selector, "%s selector is %s", url, ref->selector);
-	
+	if (ref != NULL) {
+		is(tmp->host, ref->host, "%s host is %s", url, ref->host);
+		ok(tmp->port == ref->port, "%s port is %u", url, ref->port);
+		is(tmp->selector, ref->selector, "%s selector is %s", url,
+			ref->selector);
+	} else {
+		ok(tmp == NULL, "%s is invalid", url);
+	}
+
 	/* Free up any unused resources. */
-	free(tmp);
+	if (tmp)
+		free(tmp);
 	tmp = NULL;
 }
