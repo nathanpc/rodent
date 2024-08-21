@@ -19,7 +19,7 @@ int main() {
 	gopher_addr_t *ref;
 
 	/* Setup the test harness. */
-	plan(16 * NUM_URL_TESTS);
+	plan(32 * NUM_URL_TESTS);
 
 	/* Simplest test without a selector. */
 	printf("#\n# URLs without a selector\n");
@@ -60,6 +60,40 @@ int main() {
 	ref = gopher_addr_new("g.test.com", 70, "testdir/testfile.txt");
 	test_url("gopher://g.test.com/0testdir/testfile.txt", ref);
 	test_url("gopher://g.test.com:70/0testdir/testfile.txt", ref);
+	gopher_addr_free(ref);
+	ref = NULL;
+
+	/* Test URLs without the gopher protocol prefix. */
+	printf("#\n# URLs without the protocol type prefix\n");
+	ref = gopher_addr_new("g.test.com", 70, NULL);
+	test_url("g.test.com/", ref);
+	test_url("g.test.com", ref);
+	test_url("g.test.com:70/", ref);
+	test_url("g.test.com:70", ref);
+	test_url("g.test.com/1/", ref);
+	test_url("g.test.com:70/1/", ref);
+	test_url("g.test.com/1", ref);
+	test_url("g.test.com:70/1", ref);
+	gopher_addr_free(ref);
+	ref = NULL;
+	ref = gopher_addr_new("g.test.com", 70, "/testdir");
+	test_url("g.test.com/1/testdir", ref);
+	test_url("g.test.com:70/1/testdir", ref);
+	gopher_addr_free(ref);
+	ref = NULL;
+	ref = gopher_addr_new("g.test.com", 70, "/testdir/testfile.txt");
+	test_url("g.test.com/0/testdir/testfile.txt", ref);
+	test_url("g.test.com:70/0/testdir/testfile.txt", ref);
+	gopher_addr_free(ref);
+	ref = NULL;
+	ref = gopher_addr_new("g.test.com", 70, "testdir");
+	test_url("g.test.com/1testdir", ref);
+	test_url("g.test.com:70/1testdir", ref);
+	gopher_addr_free(ref);
+	ref = NULL;
+	ref = gopher_addr_new("g.test.com", 70, "testdir/testfile.txt");
+	test_url("g.test.com/0testdir/testfile.txt", ref);
+	test_url("g.test.com:70/0testdir/testfile.txt", ref);
 	gopher_addr_free(ref);
 	ref = NULL;
 

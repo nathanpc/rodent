@@ -179,18 +179,19 @@ gopher_addr_t *gopher_addr_parse(const char *uri, gopher_type_t *type) {
 		*type = GOPHER_TYPE_UNKNOWN;
 
 	/* Check if it starts with protocol. */
-	p = strstr(uri, "gopher://");
-	if (p != NULL) {
-		/* Jump past the protocol part. */
-		p += 9;
-	} else {
+	p = uri;
+	if (strstr(uri, "://") != NULL) {
 		/* Ensure we have the right protocol. */
-		if (strstr(uri, "://") != NULL) {
+		p = strstr(uri, "gopher://");
+		if (p != NULL) {
+			/* Jump past the protocol part. */
+			p += 9;
+		} else {
 			log_printf(LOG_ERROR, "Tried parsing URI for other protocol\n");
 			return NULL;
 		}
 	}
-	
+
 	/* Create the address object. */
 	addr = gopher_addr_new(NULL, 70, NULL);
 	if (addr == NULL)
