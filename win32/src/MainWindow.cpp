@@ -125,12 +125,11 @@ void MainWindow::BrowseTo() {
  *              the address combo control.
  */
 void MainWindow::BrowseTo(LPCTSTR szURL) {
-	gopher_type_t type = GOPHER_TYPE_UNKNOWN;
 	gopher_addr_t *addr = NULL;
 
 	try {
 		// Get gopherspace address structure from URL.
-		addr = Gopher::Address::from_url(szURL, &type);
+		addr = Gopher::Address::from_url(szURL);
 	} catch (const std::exception& e) {
 		MsgBoxException(this->hWnd, e, _T("Failed to parse URL"));
 		UpdateControls();
@@ -138,7 +137,7 @@ void MainWindow::BrowseTo(LPCTSTR szURL) {
 	}
 
 	// Browse to the address.
-	BrowseTo(addr, type);
+	BrowseTo(addr);
 }
 
 /**
@@ -159,9 +158,9 @@ void MainWindow::BrowseTo(const Gopher::Item& goItem) {
  * @param addr Internal gopherspace address structure to navigate to. This will
  *             be owned by the internals of the API, ensure it won't conflict.
  */
-void MainWindow::BrowseTo(gopher_addr_t *addr, gopher_type_t type) {
+void MainWindow::BrowseTo(gopher_addr_t *addr) {
 	// If the type is not a directory or unknown (assuming directory) try to open it.
-	if ((type != GOPHER_TYPE_DIR) && (type != GOPHER_TYPE_UNKNOWN)) {
+	if ((addr->type != GOPHER_TYPE_DIR) && (addr->type != GOPHER_TYPE_UNKNOWN)) {
 		// TODO: Implement downloading files from URLs.
 		MsgBoxError(this->hWnd, _T("Still not implemented"),
 			_T("Navigating directly to files is not yet implemented."));
@@ -176,7 +175,6 @@ void MainWindow::BrowseTo(gopher_addr_t *addr, gopher_type_t type) {
 		sizeof(DirectoryFetchArgs));
 	dfa->lpThis = this;
 	dfa->addr = addr;
-	dfa->type = type;
 	HANDLE hFetchThread = (HANDLE)_beginthread(
 		MainWindow::FetchDirectoryThreadProc, 0, (void *)dfa);
 }
@@ -276,7 +274,7 @@ void MainWindow::GoToParent() {
 	}
 
 	// Navigate to the parent.
-	BrowseTo(addr, GOPHER_TYPE_DIR);
+	BrowseTo(addr);
 }
 
 /**
@@ -287,8 +285,7 @@ void MainWindow::LoadDirectory() {
 	ListView_DeleteAllItems(hwndDirectory);
 
 	// Reset the address bar contents with parsed address.
-	TCHAR *szNewURL = Gopher::Address::as_url(goDirectory->c_dir()->addr,
-		GOPHER_TYPE_DIR);
+	TCHAR *szNewURL = Gopher::Address::as_url(goDirectory->c_dir()->addr);
 	SetWindowText(hwndAddressCombo, szNewURL);
 	free(szNewURL);
 

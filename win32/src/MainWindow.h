@@ -68,7 +68,6 @@ private:
 	typedef struct {
 		MainWindow *lpThis;
 		gopher_addr_t *addr;
-		gopher_type_t type;
 	} DirectoryFetchArgs;
 
 public:
@@ -90,7 +89,7 @@ public:
 	void BrowseTo();
 	void BrowseTo(LPCTSTR szURL);
 	void BrowseTo(const Gopher::Item& goItem);
-	void BrowseTo(gopher_addr_t *addr, gopher_type_t type);
+	void BrowseTo(gopher_addr_t *addr);
 	void GoBack();
 	void GoNext();
 	void GoToParent();

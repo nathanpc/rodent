@@ -24,7 +24,6 @@ using namespace Gopher;
  * @param readOnly The object DOES NOT own its internal structure?
  */
 Address::Address(gopher_addr_t *addr, bool readOnly) {
-	this->m_cType = GOPHER_TYPE_UNKNOWN;
 	this->init(addr, readOnly);
 }
 
@@ -34,7 +33,6 @@ Address::Address(gopher_addr_t *addr, bool readOnly) {
  * @param addr Internal gopherspace address structure.
  */
 Address::Address(const gopher_addr_t *addr) {
-	this->m_cType = GOPHER_TYPE_UNKNOWN;
 	this->init(const_cast<gopher_addr_t *>(addr), true);
 }
 
@@ -44,7 +42,7 @@ Address::Address(const gopher_addr_t *addr) {
  * @param uri Universal Resource Identifier of the gopherspace.
  */
 Address::Address(tstring uri) {
-	this->init(Address::from_url(uri, &this->m_cType), false);
+	this->init(Address::from_url(uri), false);
 }
 
 /**
@@ -76,14 +74,13 @@ void Address::init(gopher_addr_t *addr, bool readOnly) {
  *
  * @warning This method dinamically allocates memory.
  *
- * @param url  Gopherspace URL string.
- * @param type Optional. Stores the parsed Gopher entry item type character.
+ * @param url Gopherspace URL string.
  *
  * @return Gopherspace address structure allocated based on the provided URL.
  *
  * @see gopher_addr_free
  */
-gopher_addr_t *Address::from_url(const TCHAR *url, gopher_type_t *type) {
+gopher_addr_t *Address::from_url(const TCHAR *url) {
 #ifdef UNICODE
 	// Convert the Unicode string to multi-byte.
 	char *szURL = win_wcstombs(url);
@@ -94,7 +91,7 @@ gopher_addr_t *Address::from_url(const TCHAR *url, gopher_type_t *type) {
 #endif // UNICODE
 
 	// Try to parse the supplied URL.
-	gopher_addr_t *addr = gopher_addr_parse(szURL, type);
+	gopher_addr_t *addr = gopher_addr_parse(szURL);
 	if (addr == nullptr) {
 		throw std::exception("Failed to parse URL into gopherspace address "
 			"object");
@@ -113,15 +110,14 @@ gopher_addr_t *Address::from_url(const TCHAR *url, gopher_type_t *type) {
  *
  * @warning This method dinamically allocates memory.
  *
- * @param url  Gopherspace URL string.
- * @param type Optional. Stores the parsed Gopher entry item type character.
+ * @param url Gopherspace URL string.
  *
  * @return Gopherspace address structure allocated based on the provided URL.
  *
  * @see gopher_addr_free
  */
-gopher_addr_t *Address::from_url(tstring url, gopher_type_t *type) {
-	return from_url(url.c_str(), type);
+gopher_addr_t *Address::from_url(tstring url) {
+	return from_url(url.c_str());
 }
 
 /**
@@ -130,20 +126,19 @@ gopher_addr_t *Address::from_url(tstring url, gopher_type_t *type) {
  * @warning This method dinamically allocates memory.
  *
  * @param addr Gopherspace address structure.
- * @param type Gopher entry item type character.
  *
  * @return URL string representing the address structure.
  */
-TCHAR *Address::as_url(const gopher_addr_t *addr, gopher_type_t type) {
+TCHAR *Address::as_url(const gopher_addr_t *addr) {
 #ifdef UNICODE
-	char *mb = gopher_addr_str(addr, type);
+	char *mb = gopher_addr_str(addr);
 	TCHAR *uni = win_mbstowcs(mb);
 	free(mb);
 	mb = NULL;
 
 	return uni;
 #else
-	return gopher_addr_str(addr, type);
+	return gopher_addr_str(addr);
 #endif // UNICODE
 }
 
@@ -155,7 +150,7 @@ TCHAR *Address::as_url(const gopher_addr_t *addr, gopher_type_t type) {
  * @return URL string representing the address object.
  */
 TCHAR *Address::to_url() const {
-	return Address::as_url(this->m_addr, this->m_cType);
+	return Address::as_url(this->m_addr);
 }
 
 /**
@@ -195,7 +190,7 @@ Address Address::replicate(const gopher_addr_t *addr) {
 	gopher_addr_t *addrCopy;
 
 	// Create a copy of our structure.
-	addrCopy = gopher_addr_new(addr->host, addr->port, addr->selector);
+	addrCopy = gopher_addr_new(addr->host, addr->port, addr->selector, addr->type);
 	addrCopy->ipaddr = (sockaddr_in *)malloc(addr->ipaddr_len);
 	memcpy(addrCopy->ipaddr, addr->ipaddr, addr->ipaddr_len);
 	addrCopy->ipaddr_len = addr->ipaddr_len;
@@ -375,7 +370,7 @@ Item::~Item() {
  * @return URL string representing the address of the item.
  */
 TCHAR *Item::to_url() const {
-	return Address::as_url(this->m_item->addr, this->m_item->type);
+	return Address::as_url(this->m_item->addr);
 }
 
 /**
@@ -403,7 +398,10 @@ void Item::notify(bool force) {
  * @return Gopher type identifier.
  */
 gopher_type_t Item::type() const {
-	return this->m_item->type;
+	if (this->m_item->addr)
+		return this->m_item->addr->type;
+
+	return GOPHER_TYPE_UNKNOWN;
 }
 
 /**

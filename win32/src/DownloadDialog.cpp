@@ -81,7 +81,7 @@ void DownloadDialog::Download(const Gopher::Item& item, bool bAutoOpen) {
 		sizeof(FileDownloadArgs));
 	fda->lpThis = this;
 	fda->addr = item.c_item()->addr;
-	fda->type = item.c_item()->type;
+	fda->type = item.type();
 	HANDLE hDownloadThread = (HANDLE)_beginthread(
 		DownloadDialog::FileTransferThreadProc, 0, (void *)fda);
 }
@@ -172,7 +172,7 @@ void DownloadDialog::UpdateFileDetails() {
 
 	// Set file information labels.
 	SetWindowText(this->hwndPathLabel, this->fdl->path());
-	TCHAR *szURL = Gopher::Address::as_url(this->fdl->c_addr(), GOPHER_TYPE_BINARY);
+	TCHAR *szURL = Gopher::Address::as_url(this->fdl->c_addr());
 	SetWindowText(this->hwndURLLabel, szURL);
 	free(szURL);
 	szURL = NULL;
