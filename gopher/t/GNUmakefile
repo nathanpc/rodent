@@ -6,7 +6,7 @@ LDFLAGS += -L/usr/local/lib
 LIBS    += /usr/local/lib/libtap.a
 
 # Sources and Objects
-SOURCES = test.c 01_urlpar.c gopher.c
+SOURCES = test.c 01_urlpar.c 02_urlgen.c gopher.c
 TARGET  = test
 OBJECTS := $(patsubst %.c, %.o, $(SOURCES))
 
