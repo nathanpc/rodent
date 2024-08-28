@@ -214,21 +214,21 @@ gopher_addr_t *gopher_addr_parse(const char *uri) {
 		} else {
 			strdupsep(&port, p, *pend);
 		}
-		
+
 		/* Set port in address object. */
 		addr->port = (uint16_t)atoi(port);
 		free(port);
 	}
 	if (pend == NULL)
 		return addr;
-	
+
 	/* Get type identifier. */
 	p = pend + 1;
 	if (*p == '\0')
 		return addr;
 	addr->type = (gopher_type_t)*p;
 	p++;
-	
+
 	/* Get the selector. */
 	if ((*p == '\0') || ((*p == '/') && (*(p + 1) == '\0')))
 		return addr;
@@ -254,7 +254,7 @@ gopher_addr_t *gopher_addr_parse(const char *uri) {
 int gopher_getaddrinfo(const gopher_addr_t *addr, struct addrinfo **ai) {
 	struct addrinfo hints;
 	char port[6];
-	
+
 	/* Build up the hints for the address we want to resolve. */
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -404,7 +404,7 @@ buildparent:
 		selparent = NULL;
 	}
 #endif /* _WIN32 */
-	
+
 	/* Duplicate the address while changing to the parent selector. */
 	if (parent != NULL) {
 		*parent = gopher_addr_new(addr->host, addr->port, selparent,
@@ -433,7 +433,7 @@ void gopher_addr_print(const gopher_addr_t *addr) {
 		printf("(null)\n");
 		return;
 	}
-	
+
 	/* Print out the object data. */
 	url = gopher_addr_str(addr);
 	printf("%s\n", url);
@@ -463,7 +463,7 @@ void gopher_addr_free(gopher_addr_t *addr) {
 		log_printf(LOG_WARNING, "Disconnecting the socket on address free\n");
 		gopher_disconnect(addr);
 	}
-	
+
 	/* Free the object itself. */
 	free(addr);
 }
@@ -490,7 +490,7 @@ int gopher_connect(gopher_addr_t *addr) {
 	int ret;
 	struct addrinfo *query;
 	struct addrinfo *ai;
-	
+
 	/* Resolve the server's IP address. */
 	ret = gopher_getaddrinfo(addr, &query);
 	if (ret != 0) {
@@ -526,12 +526,12 @@ int gopher_connect(gopher_addr_t *addr) {
 		freeaddrinfo(query);
 		return ENOMEM;
 	}
-	
+
 	/* Copy the server's IP address and free the resolve object. */
 	memcpy(addr->ipaddr, ai->ai_addr, addr->ipaddr_len);
 	freeaddrinfo(query);
 	query = NULL;
-	
+
 	/* Get a socket file descriptor for our connection. */
 	addr->sockfd = socket(PF_INET, SOCK_STREAM, 0);
 	if (addr->sockfd == INVALID_SOCKET) {
@@ -539,7 +539,7 @@ int gopher_connect(gopher_addr_t *addr) {
 			sockerrno);
 		return sockerrno;
 	}
-	
+
 #ifdef DEBUG
 	/* Log information about the address. */
 	if (1) {
@@ -631,7 +631,7 @@ int gopher_disconnect(gopher_addr_t *addr) {
  *
  * @see gopher_dir_free
  */
-gopher_dir_t *gopher_dir_new(gopher_addr_t *addr) {	
+gopher_dir_t *gopher_dir_new(gopher_addr_t *addr) {
 	gopher_dir_t *dir;
 
 	/* Allocate the object. */
@@ -672,14 +672,14 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 	size_t len;
 	int ret;
 	int termlined;
-	
+
 	/* Send selector of our request. */
 	ret = gopher_send_line(addr, (addr->selector) ? addr->selector : "", NULL);
 	if (ret != 0) {
 		log_errno(LOG_ERROR, "Failed to send line during directory request");
 		return ret;
 	}
-	
+
 	/* Initialize directory object. */
 	*dir = gopher_dir_new(addr);
 	pd = *dir;
@@ -695,7 +695,7 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 	len = 0;
 	while (gopher_recv_line(addr, &line, &len) == 0) {
 		gopher_item_t *item;
-		
+
 		/* Check if we have reached the termination line. */
 		if (gopher_is_termline(line)) {
 			termlined = 1;
@@ -730,12 +730,12 @@ int gopher_dir_request(gopher_addr_t *addr, gopher_dir_t **dir) {
 			item = gopher_item_new(msg, gopher_addr_new("_server.fail", 0,
 				"PARSING_FAILED", GOPHER_TYPE_ERROR));
 			free(msg);
-			
+
 #ifdef DEBUG
 			free(line);
 			break;
 #endif
-		}	
+		}
 
 		/* Check if a monstrosity of a server just sent an incomplete item. */
 		if (item->addr == NULL) {
@@ -764,7 +764,7 @@ nextline:
 		log_printf(LOG_WARNING, "Server never sent termination dot\n");
 		pd->err_count++;
 	}
-	
+
 	return ret;
 }
 
@@ -880,7 +880,7 @@ int gopher_file_download(gopher_file_t *gf) {
 	size_t recv_len;
 	FILE *fh;
 	int ret;
-	
+
 	/* Send selector of our request. */
 	ret = gopher_send_line(gf->addr, (gf->addr->selector) ?
 		gf->addr->selector : "", NULL);
@@ -888,7 +888,7 @@ int gopher_file_download(gopher_file_t *gf) {
 		log_errno(LOG_ERROR, "Failed to send line during download request");
 		return ret;
 	}
-	
+
 	/* Open file for writing. */
 	fh = fopen(gf->fpath, "wb");
 	if (fh == NULL) {
@@ -902,7 +902,7 @@ int gopher_file_download(gopher_file_t *gf) {
 		/* Check if the connection was terminated. */
 		if ((ret == 0) && (recv_len == 0))
 			break;
-		
+
 		/* Increase the size counter and write stream to file. */
 		gf->fsize += recv_len;
 		fwrite(buf, sizeof(char), recv_len, fh);
@@ -1082,7 +1082,7 @@ int gopher_item_parse(gopher_item_t **item, const char *line) {
 		log_printf(LOG_ERROR, "Tried to parse the termination line\n");
 		return -1;
 	}
-	
+
 	/* Check if a monstrosity of a server just sent a blank line. */
 	if (line[0] == '\r') {
 		log_printf(LOG_ERROR, "Tried parsing an empty line\n");
@@ -1168,7 +1168,7 @@ cleanup:
 		free(host);
 	if (port)
 		free(port);
-	
+
 	return 0;
 }
 
@@ -1279,7 +1279,7 @@ void gopher_item_print(const gopher_item_t *item) {
 		printf("(null)\n");
 		return;
 	}
-	
+
 	/* Print out the object data. */
 	gopher_item_print_type(item);
 	printf("\t'%s'\t'%s'\t%s:%u", item->label, item->addr->selector,
@@ -1408,7 +1408,7 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 	/* Get string length and allocate a buffer big enough for it plus CRLF. */
 	len = strlen(buf) + 2;
 	nbuf = (char *)malloc((len + 1) * sizeof(char));
-	
+
 	/* Copy the string over and append CRLF very fast. */
 	b = buf;
 	n = nbuf;
@@ -1422,11 +1422,11 @@ int gopher_send_line(const gopher_addr_t *addr, const char *buf,
 	*n = '\n';
 	n++;
 	*n = '\0';
-	
+
 #ifdef DEBUG
 	log_printf(LOG_INFO, "Sent: \"%s\"\n", nbuf);
 #endif /* DEBUG */
-	
+
 	/* Send the line over the network. */
 	ret = gopher_send_raw(addr, (void *)nbuf, len, sent_len);
 
@@ -1502,7 +1502,7 @@ int gopher_recv_line(const gopher_addr_t *addr, char **line, size_t *len) {
 	size_t line_len;
 	size_t recv_len;
 	int ret;
-	
+
 	/* Ensure we read an entire line. */
 	ret = 0;
 	prev_line_len = 0;
@@ -1580,7 +1580,7 @@ concatrecv:
 			return ret;
 		}
 		buf[line_len] = '\0';
-		
+
 		/* Ensure we convert a non-compliant server into a compliant one. */
 		if (found == '\n') {
 			buf[line_len - 2] = '\r';
@@ -1596,7 +1596,7 @@ concatrecv:
 	*line = buf;
 	if (len != NULL)
 		*len = line_len;
-	
+
 	return 0;
 }
 
@@ -1876,7 +1876,7 @@ const char *strdupsep(char **buf, const char *str, char sep) {
 	do {
 		send = s++;
 	} while ((*send != sep) && (*send != '\0'));
-	
+
 	/* Detect invalid position. */
 	if ((send - str) == 0) {
 		*buf = strdup("");

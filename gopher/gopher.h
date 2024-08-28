@@ -81,7 +81,7 @@ typedef struct gopher_addr_s {
 	char *selector;
 	uint16_t port;
 	gopher_type_t type;
-	
+
 	int sockfd;
 	struct sockaddr_in *ipaddr;
 	socklen_t ipaddr_len;
