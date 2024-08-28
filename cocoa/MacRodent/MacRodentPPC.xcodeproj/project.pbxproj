@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		0B41D3FF2C7F3DF000C1155E /* RodentAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B41D3FE2C7F3DF000C1155E /* RodentAppDelegate.m */; };
+		0B41D41E2C7F435700C1155E /* gopher.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B41D41C2C7F435700C1155E /* gopher.c */; };
+		0B41D4272C7F452300C1155E /* GopherClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B41D4262C7F452300C1155E /* GopherClient.m */; };
 		1DDD58160DA1D0A300B32029 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1DDD58140DA1D0A300B32029 /* MainMenu.xib */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
@@ -18,6 +20,10 @@
 		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		0B41D3FD2C7F3DF000C1155E /* RodentAppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RodentAppDelegate.h; sourceTree = "<group>"; };
 		0B41D3FE2C7F3DF000C1155E /* RodentAppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RodentAppDelegate.m; sourceTree = "<group>"; };
+		0B41D41C2C7F435700C1155E /* gopher.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = gopher.c; path = ../../gopher/gopher.c; sourceTree = SOURCE_ROOT; };
+		0B41D41D2C7F435700C1155E /* gopher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gopher.h; path = ../../gopher/gopher.h; sourceTree = SOURCE_ROOT; };
+		0B41D4252C7F452300C1155E /* GopherClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GopherClient.h; path = ../GopherClient.h; sourceTree = SOURCE_ROOT; };
+		0B41D4262C7F452300C1155E /* GopherClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GopherClient.m; path = ../GopherClient.m; sourceTree = SOURCE_ROOT; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
 		1DDD58150DA1D0A300B32029 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
@@ -46,8 +52,19 @@
 			children = (
 				0B41D3FD2C7F3DF000C1155E /* RodentAppDelegate.h */,
 				0B41D3FE2C7F3DF000C1155E /* RodentAppDelegate.m */,
+				0B41D4252C7F452300C1155E /* GopherClient.h */,
+				0B41D4262C7F452300C1155E /* GopherClient.m */,
 			);
 			name = Classes;
+			sourceTree = "<group>";
+		};
+		0B41D41B2C7F432800C1155E /* Gopher */ = {
+			isa = PBXGroup;
+			children = (
+				0B41D41C2C7F435700C1155E /* gopher.c */,
+				0B41D41D2C7F435700C1155E /* gopher.h */,
+			);
+			name = Gopher;
 			sourceTree = "<group>";
 		};
 		1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */ = {
@@ -79,6 +96,7 @@
 		29B97314FDCFA39411CA2CEA /* MacRodent */ = {
 			isa = PBXGroup;
 			children = (
+				0B41D41B2C7F432800C1155E /* Gopher */,
 				080E96DDFE201D6D7F000001 /* Classes */,
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
@@ -173,6 +191,8 @@
 			files = (
 				8D11072D0486CEB800E47090 /* main.m in Sources */,
 				0B41D3FF2C7F3DF000C1155E /* RodentAppDelegate.m in Sources */,
+				0B41D41E2C7F435700C1155E /* gopher.c in Sources */,
+				0B41D4272C7F452300C1155E /* GopherClient.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,7 +259,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				ONLY_ACTIVE_ARCH_PRE_XCODE_3_1 = "$(NATIVE_ARCH_ACTUAL)";
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Debug;
 		};
@@ -252,7 +272,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				PREBINDING = NO;
-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 			};
 			name = Release;
 		};
