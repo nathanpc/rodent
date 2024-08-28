@@ -6,14 +6,14 @@ LDFLAGS += -L/usr/local/lib
 LIBS    += /usr/local/lib/libtap.a
 
 # Sources and Objects
-SOURCES = 01_url.c gopher.c
+SOURCES = test.c 01_urlpar.c gopher.c
 TARGET  = test
 OBJECTS := $(patsubst %.c, %.o, $(SOURCES))
 
 .PHONY: all compile run testcount debug memcheck clean
 all: compile
 
-compile: $(TARGET)	
+compile: $(TARGET)
 
 run: $(TARGET)
 	./$(TARGET)

@@ -1,6 +1,6 @@
 /**
- * 01_url.c
- * Tests the URL parser and builder functions.
+ * 01_urlpar.c
+ * Tests the URL parser functions.
  *
  * @author Nathan Campos <nathan@innoveworkshop.com>
  */
@@ -9,17 +9,24 @@
 
 #include "gopher.h"
 
+/* Private definitions. */
 #define NUM_URL_TESTS 4
-void test_url(const char *url, gopher_addr_t *ref);
+static void test_url(const char *url, gopher_addr_t *ref);
 
 /**
- * Testing program's main entry point.
+ * Gets the number of planned tests.
+ *
+ * @return Number of planned tests.
  */
-int main() {
-	gopher_addr_t *ref;
+int t_urlpar_plan(void) {
+	return (32 * NUM_URL_TESTS) + 1;
+}
 
-	/* Setup the test harness. */
-	plan((32 * NUM_URL_TESTS) + 1);
+/**
+ * Runs unit tests.
+ */
+void t_urlpar_run(void) {
+	gopher_addr_t *ref;
 
 	/* Simplest test without a selector. */
 	printf("#\n# URLs without a selector\n");
@@ -110,9 +117,6 @@ int main() {
 	/* Test invalid URLs. */
 	printf("#\n# Invalid URLs\n");
 	test_url("http://g.test.com/", NULL);
-
-	/* Finish the tests. */
-	done_testing();
 }
 
 /**
@@ -121,7 +125,7 @@ int main() {
  * @param url A gopherspace URL to be tested.
  * @param ref A reference gopherspace address object.
  */
-void test_url(const char *url, gopher_addr_t *ref) {
+static void test_url(const char *url, gopher_addr_t *ref) {
 	gopher_addr_t *tmp;
 
 	/* Announce the new test URL. */

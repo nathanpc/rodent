@@ -7,7 +7,7 @@ LIBS    += -ltap
 
 # Sources and Objects
 TARGET  = test
-OBJECTS := 01_url.o gopher.o
+OBJECTS := test.o 01_urlpar.o gopher.o
 
 .PHONY: all compile run testcount debug memcheck clean
 all: compile
