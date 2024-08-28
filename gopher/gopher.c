@@ -308,10 +308,10 @@ char *gopher_addr_str(const gopher_addr_t *addr) {
 		return NULL;
 	}
 
-	/* Ensure we have a type in the URL always. As specified in RFC 4266 */
+	/* Ensure we always have a type in the URL. As specified in RFC 4266 */
 	typechr = (char)addr->type;
-	if (addr->type == '\0')
-		typechr = (char)GOPHER_TYPE_INFO;
+	if (typechr == '\0')
+		typechr = (char)GOPHER_TYPE_DIR;
 
 	/* Build up the URL. */
 	buf = strcatp(url, "gopher://");
