@@ -10,6 +10,23 @@
 		0B41D3FF2C7F3DF000C1155E /* RodentAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B41D3FE2C7F3DF000C1155E /* RodentAppDelegate.m */; };
 		0B41D41E2C7F435700C1155E /* gopher.c in Sources */ = {isa = PBXBuildFile; fileRef = 0B41D41C2C7F435700C1155E /* gopher.c */; };
 		0B41D4272C7F452300C1155E /* GopherClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 0B41D4262C7F452300C1155E /* GopherClient.m */; };
+		0B41D51E2C7FB8C800C1155E /* application-x-executable.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D51D2C7FB8C800C1155E /* application-x-executable.icns */; };
+		0B41D5302C80C8D000C1155E /* audio-x-generic.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5202C80C8D000C1155E /* audio-x-generic.icns */; };
+		0B41D5312C80C8D000C1155E /* dialog-warning.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5212C80C8D000C1155E /* dialog-warning.icns */; };
+		0B41D5322C80C8D000C1155E /* edit-find.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5222C80C8D000C1155E /* edit-find.icns */; };
+		0B41D5332C80C8D000C1155E /* folder.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5232C80C8D000C1155E /* folder.icns */; };
+		0B41D5342C80C8D000C1155E /* go-next.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5242C80C8D000C1155E /* go-next.icns */; };
+		0B41D5352C80C8D000C1155E /* go-previous.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5252C80C8D000C1155E /* go-previous.icns */; };
+		0B41D5362C80C8D000C1155E /* go-up.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5262C80C8D000C1155E /* go-up.icns */; };
+		0B41D5372C80C8D000C1155E /* help-browser.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5272C80C8D000C1155E /* help-browser.icns */; };
+		0B41D5382C80C8D000C1155E /* image-x-generic.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5282C80C8D000C1155E /* image-x-generic.icns */; };
+		0B41D5392C80C8D000C1155E /* process-stop.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D5292C80C8D000C1155E /* process-stop.icns */; };
+		0B41D53A2C80C8D000C1155E /* text-html.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D52A2C80C8D000C1155E /* text-html.icns */; };
+		0B41D53B2C80C8D000C1155E /* text-x-generic.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D52B2C80C8D000C1155E /* text-x-generic.icns */; };
+		0B41D53C2C80C8D000C1155E /* video-display.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D52C2C80C8D000C1155E /* video-display.icns */; };
+		0B41D53D2C80C8D000C1155E /* video-x-generic.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D52D2C80C8D000C1155E /* video-x-generic.icns */; };
+		0B41D53E2C80C8D000C1155E /* view-refresh.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D52E2C80C8D000C1155E /* view-refresh.icns */; };
+		0B41D53F2C80C8D000C1155E /* x-office-document.icns in Resources */ = {isa = PBXBuildFile; fileRef = 0B41D52F2C80C8D000C1155E /* x-office-document.icns */; };
 		1DDD58160DA1D0A300B32029 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1DDD58140DA1D0A300B32029 /* MainMenu.xib */; };
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
@@ -24,6 +41,23 @@
 		0B41D41D2C7F435700C1155E /* gopher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gopher.h; path = ../../gopher/gopher.h; sourceTree = SOURCE_ROOT; };
 		0B41D4252C7F452300C1155E /* GopherClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GopherClient.h; path = ../GopherClient.h; sourceTree = SOURCE_ROOT; };
 		0B41D4262C7F452300C1155E /* GopherClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GopherClient.m; path = ../GopherClient.m; sourceTree = SOURCE_ROOT; };
+		0B41D51D2C7FB8C800C1155E /* application-x-executable.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "application-x-executable.icns"; path = "../icons/application-x-executable.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5202C80C8D000C1155E /* audio-x-generic.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "audio-x-generic.icns"; path = "../icons/audio-x-generic.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5212C80C8D000C1155E /* dialog-warning.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "dialog-warning.icns"; path = "../icons/dialog-warning.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5222C80C8D000C1155E /* edit-find.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "edit-find.icns"; path = "../icons/edit-find.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5232C80C8D000C1155E /* folder.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = folder.icns; path = ../icons/folder.icns; sourceTree = SOURCE_ROOT; };
+		0B41D5242C80C8D000C1155E /* go-next.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "go-next.icns"; path = "../icons/go-next.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5252C80C8D000C1155E /* go-previous.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "go-previous.icns"; path = "../icons/go-previous.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5262C80C8D000C1155E /* go-up.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "go-up.icns"; path = "../icons/go-up.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5272C80C8D000C1155E /* help-browser.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "help-browser.icns"; path = "../icons/help-browser.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5282C80C8D000C1155E /* image-x-generic.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "image-x-generic.icns"; path = "../icons/image-x-generic.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D5292C80C8D000C1155E /* process-stop.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "process-stop.icns"; path = "../icons/process-stop.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D52A2C80C8D000C1155E /* text-html.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "text-html.icns"; path = "../icons/text-html.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D52B2C80C8D000C1155E /* text-x-generic.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "text-x-generic.icns"; path = "../icons/text-x-generic.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D52C2C80C8D000C1155E /* video-display.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "video-display.icns"; path = "../icons/video-display.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D52D2C80C8D000C1155E /* video-x-generic.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "video-x-generic.icns"; path = "../icons/video-x-generic.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D52E2C80C8D000C1155E /* view-refresh.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "view-refresh.icns"; path = "../icons/view-refresh.icns"; sourceTree = SOURCE_ROOT; };
+		0B41D52F2C80C8D000C1155E /* x-office-document.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = "x-office-document.icns"; path = "../icons/x-office-document.icns"; sourceTree = SOURCE_ROOT; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
 		1DDD58150DA1D0A300B32029 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
@@ -65,6 +99,30 @@
 				0B41D41D2C7F435700C1155E /* gopher.h */,
 			);
 			name = Gopher;
+			sourceTree = "<group>";
+		};
+		0B41D50F2C7F9A1000C1155E /* Icons */ = {
+			isa = PBXGroup;
+			children = (
+				0B41D5202C80C8D000C1155E /* audio-x-generic.icns */,
+				0B41D5212C80C8D000C1155E /* dialog-warning.icns */,
+				0B41D5222C80C8D000C1155E /* edit-find.icns */,
+				0B41D5232C80C8D000C1155E /* folder.icns */,
+				0B41D5242C80C8D000C1155E /* go-next.icns */,
+				0B41D5252C80C8D000C1155E /* go-previous.icns */,
+				0B41D5262C80C8D000C1155E /* go-up.icns */,
+				0B41D5272C80C8D000C1155E /* help-browser.icns */,
+				0B41D5282C80C8D000C1155E /* image-x-generic.icns */,
+				0B41D5292C80C8D000C1155E /* process-stop.icns */,
+				0B41D52A2C80C8D000C1155E /* text-html.icns */,
+				0B41D52B2C80C8D000C1155E /* text-x-generic.icns */,
+				0B41D52C2C80C8D000C1155E /* video-display.icns */,
+				0B41D52D2C80C8D000C1155E /* video-x-generic.icns */,
+				0B41D52E2C80C8D000C1155E /* view-refresh.icns */,
+				0B41D52F2C80C8D000C1155E /* x-office-document.icns */,
+				0B41D51D2C7FB8C800C1155E /* application-x-executable.icns */,
+			);
+			name = Icons;
 			sourceTree = "<group>";
 		};
 		1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */ = {
@@ -118,6 +176,7 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				0B41D50F2C7F9A1000C1155E /* Icons */,
 				8D1107310486CEB800E47090 /* Info.plist */,
 				089C165CFE840E0CC02AAC07 /* InfoPlist.strings */,
 				1DDD58140DA1D0A300B32029 /* MainMenu.xib */,
@@ -179,6 +238,23 @@
 			files = (
 				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
 				1DDD58160DA1D0A300B32029 /* MainMenu.xib in Resources */,
+				0B41D51E2C7FB8C800C1155E /* application-x-executable.icns in Resources */,
+				0B41D5302C80C8D000C1155E /* audio-x-generic.icns in Resources */,
+				0B41D5312C80C8D000C1155E /* dialog-warning.icns in Resources */,
+				0B41D5322C80C8D000C1155E /* edit-find.icns in Resources */,
+				0B41D5332C80C8D000C1155E /* folder.icns in Resources */,
+				0B41D5342C80C8D000C1155E /* go-next.icns in Resources */,
+				0B41D5352C80C8D000C1155E /* go-previous.icns in Resources */,
+				0B41D5362C80C8D000C1155E /* go-up.icns in Resources */,
+				0B41D5372C80C8D000C1155E /* help-browser.icns in Resources */,
+				0B41D5382C80C8D000C1155E /* image-x-generic.icns in Resources */,
+				0B41D5392C80C8D000C1155E /* process-stop.icns in Resources */,
+				0B41D53A2C80C8D000C1155E /* text-html.icns in Resources */,
+				0B41D53B2C80C8D000C1155E /* text-x-generic.icns in Resources */,
+				0B41D53C2C80C8D000C1155E /* video-display.icns in Resources */,
+				0B41D53D2C80C8D000C1155E /* video-x-generic.icns in Resources */,
+				0B41D53E2C80C8D000C1155E /* view-refresh.icns in Resources */,
+				0B41D53F2C80C8D000C1155E /* x-office-document.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
