@@ -39,6 +39,7 @@
         <Filename Value="mainunit.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="MainForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="MainUnit"/>
       </Unit>
@@ -56,6 +57,7 @@
     <Linking>
       <Debugging>
         <DebugInfoType Value="dsDwarf3"/>
+        <UseHeaptrc Value="True"/>
       </Debugging>
       <Options>
         <Win32>
